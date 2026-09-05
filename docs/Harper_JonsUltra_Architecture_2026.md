@@ -1,0 +1,124 @@
+# Jon's Ultra — Architecture
+
+Status: v0.3 (Sep 5 2026 — phase-2 trigger fixed to after step 5; schema gains sun/cutoffSchedule/bibNumber). Read before writing any code. Goal: adding a race never requires touching the engine.
+
+## 1. Delivery phases
+
+| Phase | Where | Form | Trigger to move on |
+|---|---|---|---|
+| 1 | Claude Project "Jon's Ultra" | Single-file HTML artifact `jons-ultra.html` | Step 5 (rainforest kit) shipped — decided 2026-09-05. Steps 6–8 and every later race are built in the repo. |
+| 2 | Claude Code repo + GitHub Pages | Multi-file: `index.html`, `src/engine.js`, `src/jon.js`, `src/biomes/*.js`, `races/*.json` | Ongoing |
+
+Phase 1 code is written so the split in phase 2 is mechanical: every module below is already a separate section with a banner comment and no cross-section globals except the ones listed in §3.
+
+## 2. Stack
+
+- HTML5 Canvas 2D, vanilla JS (ES2020), no frameworks, no build step, no external assets, no external libraries.
+- `requestAnimationFrame` loop with fixed-timestep physics (60 Hz) and variable render.
+- Web Audio API for all sound (synthesised).
+- `window.storage` (artifact key-value API) for persistence in phase 1; `localStorage` shim behind the same interface in phase 2.
+- Target: 60 fps on a 2020 laptop and a mid-range phone at 1280×720 logical resolution, DPR-aware.
+
+## 3. Modules (phase 1 = sections of one file, phase 2 = files)
+
+1. `engine` — loop, timing, input, camera, collision (AABB + circle), scene stack.
+2. `render` — layer painter, parallax, palette interpolation, particles, screen shake, HUD.
+3. `jon` — procedural character: hair/beard/tattoo drawing, animation states, hitbox.
+4. `sim` — meters, race clock, cutoffs, aid-station logic, pacer, difficulty rules.
+5. `spawner` — reads the race config's hazard tables and elevation profile; emits obstacles, animals, pickups, weather with seeded RNG (seed = race id + attempt).
+6. `biomes/<kit>` — drawing functions for one biome kit: sky, ridges, vegetation, ground surface, foreground, particle set. One kit serves several races via palette.
+7. `hazards` — obstacle and animal behaviours (static, patrol, charge, ambush, dart, fly).
+8. `ui` — title, race select, intro card, aid card, finish, DNF, settings.
+9. `audio` — synth voices and ambient beds keyed by biome.
+10. `store` — save/load per race + difficulty.
+11. `races` — the race registry: one config object per race (§4).
+
+Allowed globals: `GAME` (state), `RACES` (registry), `BIOMES` (kit registry). Nothing else.
+
+## 4. Race config schema
+
+Every race is one object. Adding a race = adding one object and, if needed, one biome kit. The engine never references a race by name.
+
+```js
+{
+  id: "hurt100",                       // slug, used for storage keys and seeds
+  name: "HURT 100",
+  location: "Honolulu, Oahu, HI",
+  month: "January",
+  distanceMiles: 100,
+  structure: { type: "loop", loopMiles: 20, laps: 5 },   // or { type: "point" } or { type: "fixedTime", loopMiles: 1, targetMiles: 200 }
+  startTime: "06:00",                  // local, drives day/night
+  timeLimitHours: 36,
+  gainFeet: 24500,
+  altitudeFeet: { min: 300, max: 1900 },
+  biome: "rainforest",                 // key into BIOMES
+  palette: { day: {...}, dusk: {...}, night: {...}, dawn: {...} },
+  moon: "none",                        // "none" | "full" — affects night ambient
+  sun: { rise: "07:05", set: "18:10" },  // local; drives sun/moon arcs and palette keyframes
+  bibNumber: 254,
+  cutoffSchedule: [[0,0],[20,12],[40,22],[60,30],[80,34.5],[100,36]],   // [absMile, hours]; alternative to per-station cutoffHours
+  elevation: [[0, 300], [1.2, 1800], ...],   // [mile, feet] within one loop (or whole course for point-to-point)
+  surfaces: [ { fromMile: 0, toMile: 3, type: "roots" }, ... ],   // each surface type carries dust 0–1 in SURFACES
+  aidStations: [
+    { name: "Makiki (Nature Center)", mile: 0, cutoffHours: null, dropBag: true, pacerStart: true, crew: true },
+    { name: "Mānoa (Paradise Park)", mile: 7.2, cutoffHours: null, dropBag: true, pacerStart: true, crew: true },
+    { name: "Nu'uanu (Judd Trail)", mile: 12.5, cutoffHours: null, dropBag: true, pacerStart: false, crew: false }
+  ],
+  rules: { pacersAllowed: true, pacerFromMile: 40, crewAllowed: true },
+  hazards: {
+    obstacles: [ { type: "rootWeb", weight: 5, surfaces: ["roots"] }, { type: "streamCrossing", weight: 2, atMiles: [6.8, 7.6, 12.1, 12.9] }, ... ],
+    animals:   [ { type: "boar", weight: 3, time: ["dawn", "dusk"] }, { type: "mongoose", weight: 4 }, { type: "centipede", weight: 2, time: ["night"] } ],
+    weather:   [ { type: "rainSquall", chancePerMile: 0.05 }, { type: "mist", aboveFeet: 1400 } ]
+  },
+  pickups: ["gel", "saltTab", "watermelon", "bacon", "spamMusubi", "flatCoke"],
+  landmarks: [ { mile: 2.5, label: "Hogsback" }, { mile: 9.0, label: "Bamboo forest" } ],
+  buckles: { gold: 24, silver: 30, bronze: 36 },    // hours
+  introFacts: [ "5 laps of a 20-mile loop with 24,500 ft of climbing.", "20 stream crossings.", "Motto: We wouldn't want it to be easy." ]
+}
+```
+
+Validation: on load, `races` runs a schema check and throws with the race id and field name if anything is missing. Fail loud, not at mile 63.
+
+## 5. Difficulty as data
+
+`DIFFICULTY.realistic` and `DIFFICULTY.arcade` are objects of multipliers (scroll speed, drain rates, hit tolerance, cutoff enforcement, aid stop seconds, night ambient). The sim reads the active one; no `if (arcade)` branches anywhere else.
+
+## 6. Time scale
+
+Realistic: 100 miles ≈ 30 min → 18 s per mile at flat pace. Arcade: ≈ 6 min → 3.6 s per mile. Race clock advances proportionally so that the day/night cycle and cutoffs stay true to the real event regardless of mode.
+
+## 7. Persistence keys
+
+- `jons-ultra:progress` → `{ [raceId]: { [difficulty]: { bestHours, buckle, finishes, dnfs, furthestMile } } }` (one key, one JSON blob).
+- `jons-ultra:settings` → `{ mute, reducedMotion, lastRace, lastDifficulty }`.
+- Phase 2 stretch: `jons-ultra:household` (shared scope) for the family leaderboard.
+
+## 8. How to add a race (checklist)
+
+1. Complete the race's section in `Harper_JonsUltra_RaceBible_2026.md`; clear every VERIFY.
+2. Choose biome kit. If none fits, write a new kit in `biomes/` (sky, ridges, vegetation, ground, foreground, particles, ambient audio).
+3. Write the config object per §4. Elevation array from the real profile (40–100 points).
+4. Add any new hazard types to `hazards` with a behaviour and a drawing function.
+5. Add any new pickup types (drawing + effect).
+6. Run the schema check. Play the first 10 miles and the first night segment.
+7. Add the race card to race select (automatic from the registry — confirm it renders).
+8. Update the decisions log in `Harper_JonsUltra_DesignBible_2026.md`.
+
+## 9. Build order for phase 1 (HURT 100)
+
+1. Engine + render skeleton with a flat test ground and one parallax kit. Jon drawn and animated. Jump/duck working.
+2. Elevation-driven ground, surfaces, camera speed by grade.
+3. Meters, race clock, day/night palette, headlamp.
+4. Aid stations, cutoffs, pacer, DNF and finish screens.
+5. Rainforest kit: layers, particles, ambient audio.
+6. HURT hazards, animals, pickups, landmarks; 5-lap structure.
+7. Title, race select, difficulty toggle, persistence.
+8. Tuning passes: jump feel, spawn density curve, difficulty tables.
+
+## 10. Coding conventions
+
+- Section banners: `// ===== MODULE: jon =====`.
+- No magic numbers in behaviour code; constants live at the top of their module.
+- Every drawing function takes `(ctx, palette, t, view)` — `view` carries scroll offset and camera state — and never reads global state.
+- Seeded RNG only (`rng(seed)`); `Math.random` is banned so a run is reproducible for bug reports.
+- Comments explain why, not what.
