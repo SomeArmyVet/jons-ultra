@@ -7,6 +7,7 @@ import { RACE, bonusActive } from './race.js';
 import { UI, UI_FONT, drawHUD, drawIntroCard, drawAidCard, drawDNFCard, drawFinishCard, drawToasts, drawPause } from './ui.js';
 import { parseHM, drawLife, drawRain } from './atmosphere.js';
 import { drawSpectator, drawKatie, drawEmma, drawTortoise, finishCrowdLayout } from './cast.js';
+import { drawHazards } from './hazards.js';
 
 export const RENDER = { GROUND_Y: 432 };   // ground line at ~60% of frame height
 
@@ -45,6 +46,7 @@ export function render(ctx, tReal) {
   drawFinishLine(ctx, view, t, 'back');
   drawGroundShadow(ctx, JON.X, groundY, GAME.jon.y, -GAME.grade * SIM.FT_TO_PX, JON.TARGET_PX / JON.FIGURE_UNITS);
   drawPickups(ctx, view);
+  drawHazards(ctx, view, pal, t);
   drawPacer(ctx, view, t);
   particlesDraw(ctx);
 

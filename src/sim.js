@@ -32,9 +32,9 @@ const METERS = {
 // Design Bible §6: difficulty is data. The sim reads the active table; no if (arcade) anywhere else.
 export const DIFFICULTY = {
   realistic: { label: 'Realistic', timeScale: 50, speedMul: 1, energyDrain: 1, hydrationDrain: 1,
-               nightAmbient: 0.12, bonkSpeed: 0.6, bonkJump: 0.8, crampEvery: [3, 6], pickupMul: 1, aidStopS: 3 },
+               nightAmbient: 0.12, bonkSpeed: 0.6, bonkJump: 0.8, crampEvery: [3, 6], pickupMul: 1, aidStopS: 3, hitsPerFall: 3 },
   arcade:    { label: 'Arcade', timeScale: 300, speedMul: 5, energyDrain: 0.35, hydrationDrain: 0.35,
-               nightAmbient: 0.45, bonkSpeed: 0.9, bonkJump: 0.95, crampEvery: [8, 14], pickupMul: 1.5, aidStopS: 0 }
+               nightAmbient: 0.45, bonkSpeed: 0.9, bonkJump: 0.95, crampEvery: [8, 14], pickupMul: 1.5, aidStopS: 0, hitsPerFall: 5 }
 };
 
 // Surface footing. Hazards and slide risk arrive at step 6; here they change speed, jump, drain and look.
@@ -102,7 +102,7 @@ export function paletteAt(kit, hour) {
 }
 
 const simRng = rng(0x51a7);
-function triggerStumble(j) {
+export function triggerStumble(j) {
   if (!j.grounded || j.stumbleT > 0) return;
   j.stumbleT = SIM.STUMBLE_S; GAME.shake = Math.max(GAME.shake, 5);
 }
@@ -172,6 +172,7 @@ export function simStep(dt) {
   if (g > 0 && bonusActive('poles')) target *= RACE.POLES_CLIMB_MUL;
   if (GAME.bonk) target *= D.bonkSpeed;
   if (j.stumbleT > 0) target *= SIM.STUMBLE_SPEED;
+  if (GAME.slowT > 0) target *= GAME.slowK;                   // wading a stream or slogging a mud pit
   if (GAME.aid && !GAME.aid.done) target = 0;                 // stopped at the aid table
   GAME.speed = dt > 0 ? lerpTo(GAME.speed, target, dt, GAME.aid && !GAME.aid.done ? 8 : SIM.SPEED_RATE) : target;
   GAME.animSpeed = GAME.speed / D.speedMul;

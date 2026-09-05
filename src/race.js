@@ -5,6 +5,7 @@ import { DIFFICULTY, simStep } from './sim.js';
 import { JON, makeJon } from './jon.js';
 import { AudioBed } from './audio.js';
 import { toast, fmtClock } from './ui.js';
+import { spawnCourse } from './spawner.js';
 
 export const RACE = {
   AID_CARD_ARCADE_S: 0.8,       // Arcade: no stop, card flashes for this long
@@ -13,7 +14,8 @@ export const RACE = {
   FINISH_ZOOM: 0.35, ZOOM_LEAD_S: 2,
   BATTERY_LAMP_MUL: 1.4, BANDANA_DRAIN_MUL: 0.6, POLES_CLIMB_MUL: 1.08,
   PACER_X_OFFSET: -125, PACER_CALLOUT_PX: 420,
-  HIT_ENERGY: 10
+  HIT_ENERGY: 10,
+  FALL_S: 1.4                   // stumble-fall duration after hitsPerFall hits in a segment
 };
 
 // Every station visit in race order. Loop races repeat their stations per lap; the mile-0 station is the lap end.
@@ -57,6 +59,7 @@ export function arriveAt(occ) {
   if (late) { startDNF(occ, 'cutoff'); return; }
   if (GAME.bonk && GAME.cramp) { startDNF(occ, 'pulled'); return; }
 
+  GAME.segHits = 0;                                            // hit tolerance resets at every aid station
   // Pacer leaves at the station after joining; joins at the first eligible station past pacerFromMile.
   if (GAME.pacer && GAME.nextIdx >= GAME.pacer.leaveIdx) { GAME.pacer = null; toast('Pacer segment done'); }
   const rules = GAME.course.rules || {};
@@ -94,10 +97,19 @@ export function aidStep(dt) {
 export const ITEM_LABEL = { battery: 'Headlamp battery: wider beam to the next station', iceBandana: 'Ice bandana: slower hydration drain to the next station', poles: 'Fresh poles: faster climbing to the next station' };
 export function bonusActive(type) { return GAME.bonusItem && GAME.bonusItem.type === type && GAME.nextIdx < GAME.bonusItem.untilIdx; }
 
-// Hits arrive at step 6; the pacer's shield is wired now.
+// A bite = hit: energy loss, shake, growl. hitsPerFall hits in one segment (between aid stations)
+// = stumble-fall — a bigger time loss, never death (Design Bible §5). The pacer's shield absorbs one.
 export function takeHit() {
   if (GAME.pacer && GAME.pacer.shield) { GAME.pacer.shield = false; toast('Pacer took that one'); GAME.shake = 4; return; }
   GAME.energy = clamp(GAME.energy - RACE.HIT_ENERGY, 0, 100); GAME.stats.hits++; GAME.shake = 7;
+  AudioBed.growl();
+  GAME.segHits = (GAME.segHits || 0) + 1;
+  if (GAME.segHits >= DIFFICULTY[GAME.diff].hitsPerFall) {
+    GAME.segHits = 0;
+    GAME.jon.stumbleT = RACE.FALL_S;
+    GAME.shake = 11;
+    toast('Stumble-fall!');
+  }
 }
 
 function startDNF(occ, reason) {
@@ -130,6 +142,10 @@ export function resetRace() {
   GAME.stations = buildStationList(GAME.course); GAME.nextIdx = 0;
   GAME.aid = null; GAME.dnf = null; GAME.finish = null; GAME.pacer = null; GAME.bonusItem = null; GAME.forceCutoffMiss = false;
   GAME.life = []; GAME.rain = 0; GAME.shooting = null;
+  // Hazards: a fresh seeded layout per attempt (seed = race id + attempt, Architecture §3).
+  GAME.attempt = (GAME.attempt || 0) + 1;
+  GAME.spawn = spawnCourse(GAME.course, GAME.attempt);
+  GAME.critters = []; GAME.obIdx = 0; GAME.anIdx = 0; GAME.segHits = 0; GAME.slowT = 0; GAME.slowK = 1;
   GAME.jon = makeJon(); GAME.jon.lastGroundedAt = performance.now();
   GAME.fast = false;
   simStep(0);

@@ -45,6 +45,38 @@ export const AudioBed = {
     g.gain.setValueAtTime(spec[2], ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + spec[1]);
     src.connect(f); f.connect(g); g.connect(this.master); src.start(); src.stop(ctx.currentTime + spec[1] + 0.02);
   },
+  // obstacle trip: short low thump
+  thud() {
+    if (!this.ready || this.muted) return;
+    const ctx = this.ctx, src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'lowpass'; f.frequency.value = 200;
+    g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    src.connect(f); f.connect(g); g.connect(this.master); src.start(); src.stop(ctx.currentTime + 0.12);
+  },
+  // stream wade: bright noise splash
+  splash() {
+    if (!this.ready || this.muted) return;
+    const ctx = this.ctx, src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 0.7;
+    g.gain.setValueAtTime(0.28, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    src.connect(f); f.connect(g); g.connect(this.master); src.start(); src.stop(ctx.currentTime + 0.32);
+  },
+  // bite = short growl/snap burst (Design Bible §9)
+  growl() {
+    if (!this.ready || this.muted) return;
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(95, t0); o.frequency.exponentialRampToValueAtTime(55, t0 + 0.18);
+    g.gain.setValueAtTime(0.22, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+    o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0 + 0.22);
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(), g2 = ctx.createGain();
+    f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 1.5;
+    g2.gain.setValueAtTime(0.18, t0); g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+    src.connect(f); f.connect(g2); g2.connect(this.master); src.start(t0); src.stop(t0 + 0.08);
+  },
   cowbell() {
     if (!this.ready || this.muted) return;
     const ctx = this.ctx, t0 = ctx.currentTime, g = ctx.createGain(), f = ctx.createBiquadFilter();

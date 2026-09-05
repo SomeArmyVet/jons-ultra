@@ -5,6 +5,7 @@ import { render, particlesStep, finishAbsMile } from './render.js';
 import { JON, jonStep, viewerStep, viewerToggle } from './jon.js';
 import { SIM, simStep } from './sim.js';
 import { aidStep, resetRace } from './race.js';
+import { hazardsStep } from './hazards.js';
 import { atmoStep, atmoRng } from './atmosphere.js';
 import { AudioBed } from './audio.js';
 import { Store } from './store.js';
@@ -37,6 +38,7 @@ export const GAME = {
   stations: [], nextIdx: 0, aid: null, dnf: null, finish: null, pacer: null, bonusItem: null, forceCutoffMiss: false,
   stats: { hits: 0, bonks: 0, nightMiles: 0 },
   rain: 0, mistAmount: 0, life: [], shooting: null,
+  spawn: null, critters: [], obIdx: 0, anIdx: 0, segHits: 0, slowT: 0, slowK: 1, attempt: 0,
   jon: null,
   particles: [],
   fps: { frames: 0, since: 0, value: 0 },
@@ -171,7 +173,7 @@ function step(dt) {
   if (GAME.viewer.on) { viewerStep(dt); return; }
   if (GAME.screen === 'intro') return;
   GAME.t += dt;
-  if (GAME.screen === 'race') { simStep(dt); aidStep(dt); }
+  if (GAME.screen === 'race') { simStep(dt); aidStep(dt); if (GAME.screen === 'race') hazardsStep(dt); }
   else { GAME.speed = lerpTo(GAME.speed, 0, dt, 6); GAME.animSpeed = 0; if (GAME.finish) GAME.finish.t += dt; GAME.shake = Math.max(0, GAME.shake - 18 * dt); }
   for (let k = GAME.toasts.length - 1; k >= 0; k--) { GAME.toasts[k].age += dt; if (GAME.toasts[k].age > 1.8) GAME.toasts.splice(k, 1); }
   jonStep(GAME.jon, dt);

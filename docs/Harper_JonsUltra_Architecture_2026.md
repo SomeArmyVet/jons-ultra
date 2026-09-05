@@ -26,8 +26,8 @@ The split was mechanical as planned: each phase-1 section became one file, verif
 3. `src/jon.js` — procedural character: hair sim (verlet), beard/tattoo drawing, poses/gaits, hitbox; includes the character viewer (J key), keeping poses and hair internals module-private.
 4. `src/sim.js` — meters, race clock, course sampling (elevation/grade/surface), DIFFICULTY and SURFACES tables, palette blending, placeholder trail pickups.
 5. `src/race.js` — station list, cutoffs, aid stops, pacer, drop-bag bonuses, hit pipeline, DNF/finish, race reset.
-6. `src/spawner.js` — STUB until step 6: will read the race config's hazard tables and elevation profile; emits obstacles, animals, pickups, weather with seeded RNG (seed = race id + attempt).
-7. `src/hazards.js` — STUB until step 6: obstacle and animal behaviours (static, patrol, charge, ambush, dart, fly).
+6. `src/spawner.js` — reads the race config's hazard tables and surfaces; emits obstacles and animals with seeded RNG (seed = race id + attempt). Fixed-mile obstacles (stream crossings) repeat at their real miles every lap; weighted ones roll per slot honouring surface filters, with minimum spacing and aid-station clear zones.
+7. `src/hazards.js` — obstacle resolution (jump the root web, duck the limb, slide the slab, hop or wade the streams, jump the mud pit) and animal behaviours (boar charge, mongoose dart, centipede bite, chicken flee, rat streak) with drawing functions; owns the segment hit counter (hitsPerFall → stumble-fall).
 8. `src/atmosphere.js` — sun/moon clocks, day/night keyframes, stars + shooting stars, rain/mist, ambient life, foot dust. Decoration only.
 9. `src/biomes/rainforest.js` + `src/biomes/index.js` — one file per kit (sky, ridges, vegetation, ground, foreground, palettes, life sets); `registerBiomes()` fills BIOMES at boot (registration at boot avoids import-cycle TDZ).
 10. `src/cast.js` — finish-line cast: drawKatie, drawEmma, drawTortoise, drawSpectator (cast sheet §7).
