@@ -1,12 +1,12 @@
 // ===== MODULE: render =====
 // Layer painter, parallax, night overlay, particles, race furniture (aid stations, finish line, crowd, pacer), screen shake.
-import { ENGINE, GAME, BIOMES, rng, hash, clamp, lerp, seg } from './engine.js';
+import { ENGINE, GAME, BIOMES, rng, clamp, lerp, seg } from './engine.js';
 import { JON, JON_PAL, drawJon, drawLimb, viewerRender } from './jon.js';
 import { SIM, DIFFICULTY, SURFACES, paletteAt, courseElev, courseSurface, pickupAt } from './sim.js';
 import { RACE, bonusActive } from './race.js';
 import { UI, UI_FONT, drawHUD, drawIntroCard, drawAidCard, drawDNFCard, drawFinishCard, drawToasts, drawPause } from './ui.js';
 import { parseHM, drawLife, drawRain } from './atmosphere.js';
-import { drawSpectator, drawKatie, drawEmma, drawTortoise } from './cast.js';
+import { drawSpectator, drawKatie, drawEmma, drawTortoise, finishCrowdLayout } from './cast.js';
 
 export const RENDER = { GROUND_Y: 432 };   // ground line at ~60% of frame height
 
@@ -57,7 +57,7 @@ export function render(ctx, tReal) {
   drawFinishLine(ctx, view, t, 'front');
   kit.foreground(ctx, pal, t, view);
   drawRain(ctx, pal, view);
-  if (GAME.night > 0) drawNight(ctx, GAME.night, j.headScreen);
+  if (GAME.night > 0) drawNight(ctx, GAME.night, j.headScreen, view);
   drawLife(ctx, t, 'near', view);                                   // fireflies and moths are light sources: over the darkness
   drawLife(ctx, t, 'fore', view);
   drawMeterEffects(ctx, t);
@@ -83,7 +83,17 @@ function getNightCanvas() {
   return nightCanvas;
 }
 const LAMP = { LEN: 560, HALF: 0.34, PITCH: 0.14, HALO: 95 };
-function drawNight(ctx, amount, headScreen) {
+// Finish floodlights (cast sheet §8): warm pool over the last ~250 px so the tape, trail and front-row
+// crowd stay visible at full night. Two pools, one per post light, punched out of the darkness like the
+// headlamp cone. This is what lets Jon see faces at a night finish.
+const FLOOD = { R: 230, CY: 55, OFF_X: 60, WARM: 0.10 };
+function floodCenters(view) {
+  const fx = absMileToScreenX(finishAbsMile());
+  if (fx < -400 || fx > view.W + 400) return null;
+  const gy = view.groundAt(fx);
+  return { fx, gy, centers: [[fx - FLOOD.OFF_X, gy - FLOOD.CY], [fx + FLOOD.OFF_X, gy - FLOOD.CY]] };
+}
+function drawNight(ctx, amount, headScreen, view) {
   const D = DIFFICULTY[GAME.diff];
   const ambient = clamp(D.nightAmbient + (GAME.course.moon === 'full' ? 0.3 : 0), 0, 0.9);
   const alpha = amount * (1 - ambient);
@@ -107,7 +117,23 @@ function drawNight(ctx, amount, headScreen) {
   const halo = o.createRadialGradient(hx, hy, 0, hx, hy, LAMP.HALO);
   halo.addColorStop(0, 'rgba(0,0,0,0.75)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
   o.fillStyle = halo; o.beginPath(); o.arc(hx, hy, LAMP.HALO, 0, Math.PI * 2); o.fill();
+  // floodlight pools: still in destination-out, so they cut the darkness away over the finish area
+  const flood = floodCenters(view);
+  if (flood) for (const [cx, cy] of flood.centers) {
+    const fg = o.createRadialGradient(cx, cy, 30, cx, cy, FLOOD.R);
+    fg.addColorStop(0, 'rgba(0,0,0,0.96)'); fg.addColorStop(0.55, 'rgba(0,0,0,0.8)'); fg.addColorStop(1, 'rgba(0,0,0,0)');
+    o.fillStyle = fg; o.beginPath(); o.arc(cx, cy, FLOOD.R, 0, Math.PI * 2); o.fill();
+  }
   ctx.drawImage(off, 0, 0, ENGINE.W, ENGINE.H);
+  if (flood) {                                                        // warm wash inside the pools
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = FLOOD.WARM * amount;
+    for (const [cx, cy] of flood.centers) {
+      const wf = ctx.createRadialGradient(cx, cy, 10, cx, cy, FLOOD.R);
+      wf.addColorStop(0, '#ffd890'); wf.addColorStop(1, 'rgba(255,216,144,0)');
+      ctx.fillStyle = wf; ctx.beginPath(); ctx.arc(cx, cy, FLOOD.R, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
   // Warm beam wash inside the cone.
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.10 * amount;
   const wg = ctx.createRadialGradient(hx, hy, 10, hx, hy, LAMP.LEN * 0.8);
@@ -186,17 +212,27 @@ function drawFinishLine(ctx, view, t, layer) {
   if (fx < -300 || fx > view.W + 400) return;
   const gy = view.groundAt(fx);
   if (layer === 'back') {
-    // far-side crowd (behind the trail)
-    for (let i = 0; i < RACE.CROWD_N; i++) {
-      if (hash(i * 19 + 1) > 0.5) continue;
-      const dx = -RACE.CROWD_PX + hash(i * 23 + 5) * (RACE.CROWD_PX + 60);
-      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) - 10, 0.9, i, t);
+    // back row, far side of the trail: 80% size, darker (cast sheet §6)
+    for (const c of finishCrowdLayout()) {
+      if (c.row !== 'back') continue;
+      const x = fx + c.dx;
+      if (x < -40 || x > view.W + 40) continue;
+      drawSpectator(ctx, x, view.groundAt(x) - 10, c.scale, c.seed, t, true);
     }
     // posts + banner
     ctx.fillStyle = '#6a5a3a'; ctx.fillRect(fx - 3, gy - 190, 6, 190); ctx.fillRect(fx + 84 - 3, gy - 190, 6, 190);
     ctx.fillStyle = '#c84a4a'; ctx.fillRect(fx - 10, gy - 190, 104, 34);
     ctx.fillStyle = '#F2F0E6'; ctx.font = '700 20px ' + UI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('FINISH', fx + 42, gy - 173);
+    // floodlights on both posts, housings angled at the trail; their pool is cut out of the night overlay
+    for (const [px2, dir] of [[fx, 1], [fx + 84, -1]]) {
+      ctx.fillStyle = '#3a3a3e'; ctx.fillRect(px2 - 2, gy - 204, 4, 16);
+      ctx.save(); ctx.translate(px2, gy - 204); ctx.rotate(dir * 0.5);
+      ctx.fillStyle = '#2b2b30'; ctx.beginPath(); ctx.roundRect(-6, -8, 12, 9, 2); ctx.fill();
+      ctx.fillStyle = GAME.night > 0.05 ? `rgba(255,224,150,${0.55 + 0.45 * GAME.night})` : '#cfd3d8';
+      ctx.fillRect(-4.5, -1.5, 9, 2.5);
+      ctx.restore();
+    }
     // tape at hip height until Jon crosses it
     const broken = GAME.screen === 'finish';
     ctx.strokeStyle = '#F5D021'; ctx.lineWidth = 4;
@@ -207,12 +243,12 @@ function drawFinishLine(ctx, view, t, layer) {
       ctx.beginPath(); ctx.moveTo(fx + 84, gy - 70); ctx.quadraticCurveTo(fx + 74, gy - 40 - fl, fx + 80, gy - 10); ctx.stroke();
     }
   } else {
-    // near-side crowd (in front of the trail), Katie and Emma front row, tortoise per the race config
-    for (let i = 0; i < RACE.CROWD_N; i++) {
-      if (hash(i * 19 + 1) <= 0.5) continue;
-      const dx = -RACE.CROWD_PX + hash(i * 23 + 5) * (RACE.CROWD_PX + 60);
-      if (dx > -110 && dx < -20) continue;                                 // leave the front-row spot for Katie and Emma
-      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) + 14, 1.05, i + 100, t);
+    // front row, near side: full size, floodlit; Katie and Emma keep a clear gap either side
+    for (const c of finishCrowdLayout()) {
+      if (c.row !== 'front') continue;
+      const x = fx + c.dx;
+      if (x < -40 || x > view.W + 40) continue;
+      drawSpectator(ctx, x, view.groundAt(x) + 14, c.scale, c.seed, t, false);
     }
     // Katie and Emma bounce only when the camera starts easing toward them (cast sheet §4.3).
     const cheer = finishZoom();

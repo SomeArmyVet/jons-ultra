@@ -10,7 +10,6 @@ export const RACE = {
   AID_CARD_ARCADE_S: 0.8,       // Arcade: no stop, card flashes for this long
   SKIP_REFILL_MIN: 0.15,        // Space at an aid stop still gives at least this fraction of the refill
   FINISH_HOLD_S: 1.6,           // arms-up beat before the finish card
-  CROWD_PX: 200, CROWD_N: 16,
   FINISH_ZOOM: 0.35, ZOOM_LEAD_S: 2,
   BATTERY_LAMP_MUL: 1.4, BANDANA_DRAIN_MUL: 0.6, POLES_CLIMB_MUL: 1.08,
   PACER_X_OFFSET: -125, PACER_CALLOUT_PX: 420,
