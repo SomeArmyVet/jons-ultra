@@ -171,6 +171,21 @@ function drawPickups(ctx, view) {
     } else if (p.type === 'flask') {
       ctx.fillStyle = '#A9C7D6'; ctx.beginPath(); ctx.roundRect(-6, -10, 12, 20, 4); ctx.fill();
       ctx.fillStyle = '#2E7BD6'; ctx.fillRect(-3.5, -13, 7, 4);
+    } else if (p.type === 'saltTab') {
+      ctx.fillStyle = '#F2F0E6'; ctx.beginPath(); ctx.roundRect(-6, -4, 12, 8, 4); ctx.fill();
+      ctx.strokeStyle = '#b9b6a8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 4); ctx.stroke();
+    } else if (p.type === 'bacon') {
+      ctx.strokeStyle = '#a53d2a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(-5, -6, 0, 0); ctx.quadraticCurveTo(5, 6, 10, 0); ctx.stroke();
+      ctx.strokeStyle = '#e8a07a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(-5, -6, 0, 0); ctx.quadraticCurveTo(5, 6, 10, 0); ctx.stroke();
+    } else if (p.type === 'spamMusubi') {
+      ctx.fillStyle = '#f2efe6'; ctx.beginPath(); ctx.roundRect(-9, -6, 18, 13, 2); ctx.fill();   // rice block
+      ctx.fillStyle = '#c05a4a'; ctx.fillRect(-9, -6, 18, 5);                                     // spam layer
+      ctx.fillStyle = '#223018'; ctx.fillRect(-3, -6, 6, 13);                                     // nori band
+    } else if (p.type === 'flatCoke') {
+      ctx.fillStyle = '#c8322e'; ctx.beginPath(); ctx.roundRect(-6, -10, 12, 18, 2); ctx.fill();
+      ctx.fillStyle = '#8e2320'; ctx.fillRect(-6, -10, 12, 4);
     } else {
       ctx.fillStyle = '#E0338F'; ctx.beginPath(); ctx.moveTo(-11, -7); ctx.lineTo(11, -7); ctx.lineTo(0, 10); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#1F8A4C'; ctx.fillRect(-11, -9, 22, 3);

@@ -67,7 +67,8 @@ Every race is one object. Adding a race = adding one object and, if needed, one 
     { name: "Mānoa (Paradise Park)", mile: 7.2, cutoffHours: null, dropBag: true, pacerStart: true, crew: true },
     { name: "Nu'uanu (Judd Trail)", mile: 12.5, cutoffHours: null, dropBag: true, pacerStart: false, crew: false }
   ],
-  rules: { pacersAllowed: true, pacerFromMile: 40, crewAllowed: true },
+  rules: { pacersAllowed: true, pacerFromMile: 60, crewAllowed: true },
+  poles: true,                         // Jon carries poles in this race (false only for Across the Years)
   tortoise: { where: "aidTable" },     // finish-line easter egg placement: "aidTable" | "trail" | "tote" | "rock" | "lap" (cast sheet §5/§7); pick one per race, vary it
 
   hazards: {

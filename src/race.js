@@ -2,7 +2,7 @@
 // Aid stations, cutoffs, pacer, DNF, finish. Everything reads the course config; nothing names a race.
 import { GAME, Input, clamp, lerp } from './engine.js';
 import { DIFFICULTY, simStep } from './sim.js';
-import { makeJon } from './jon.js';
+import { JON, makeJon } from './jon.js';
 import { AudioBed } from './audio.js';
 import { toast, fmtClock } from './ui.js';
 
@@ -47,7 +47,11 @@ function raceHours() { return GAME.raceSec / 3600; }
 // Called by the sim when Jon's mile crosses a station.
 export function arriveAt(occ) {
   const D = DIFFICULTY[GAME.diff];
-  if (occ.isFinish) { startFinish(); return; }
+  if (occ.isFinish) {
+    // Reaching the line after the course closes is a DNF, not a finish (course closure is real).
+    if (occ.cutoffH != null && raceHours() > occ.cutoffH) { startDNF(occ, 'cutoff'); return; }
+    startFinish(); return;
+  }
   const late = (occ.cutoffH != null && raceHours() > occ.cutoffH) || GAME.forceCutoffMiss;
   GAME.forceCutoffMiss = false;
   if (late) { startDNF(occ, 'cutoff'); return; }
@@ -116,6 +120,9 @@ export function finishSummaryText() {
 }
 
 export function resetRace() {
+  // Per-race character flags come from the config (character sheet: poles off only for Across the Years).
+  JON.BIB = String(GAME.course.bibNumber || '254');
+  JON.POLES = GAME.course.poles !== false;
   GAME.scroll = 0; GAME.mile = 0; GAME.lap = 1; GAME.raceSec = 0; GAME.speed = 0; GAME.camY = 0;
   GAME.energy = 100; GAME.hydration = 100; GAME.bonk = false; GAME.cramp = false; GAME.crampTimer = 4;
   GAME.collected = new Set(); GAME.floaters = []; GAME.toasts = []; GAME.particles = [];

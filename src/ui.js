@@ -123,7 +123,7 @@ export function drawHUD(ctx) {
   const D = DIFFICULTY[GAME.diff], c = GAME.course;
   ctx.fillStyle = 'rgba(16, 32, 26, 0.6)'; ctx.fillRect(0, 0, ENGINE.W, 74);
   ctx.fillStyle = '#eaf3e4'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Jon's Ultra  v0.5", 18, 20);
+  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Jon's Ultra  v0.6", 18, 20);
 
   // Row 1: position, clock, mode
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.92)';

@@ -221,9 +221,13 @@ async function boot() {
   const canvas = document.getElementById('game');
   Screen.init(canvas); Input.init(canvas);
   registerBiomes();
-  const course = await (await fetch('./races/test20.json')).json();
-  RACES[course.id] = course;
-  GAME.course = course;
+  for (const id of ['hurt100', 'test20']) {
+    const course = await (await fetch(`./races/${id}.json`)).json();
+    RACES[course.id] = course;
+  }
+  // ?race=test20 keeps the synthetic loop reachable for regression tests until race select lands at step 7.
+  const raceId = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('race') : null;
+  GAME.course = RACES[raceId] || RACES.hurt100;
   resetRace();
   GAME.screen = 'intro';
   Store.get('jons-ultra:settings').then(sv => { if (sv && sv.mute) AudioBed.muted = true; });

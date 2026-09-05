@@ -6,6 +6,7 @@ import { JON } from './jon.js';
 import { RENDER } from './render.js';
 import { RACE, nextStation, arriveAt, bonusActive } from './race.js';
 import { nightAmount, middayAmount, dayBlend } from './atmosphere.js';
+import { toast } from './ui.js';
 
 export const SIM = {
   PX_PER_MILE: 5400,        // Architecture §6: realistic ≈ 17 s/mile at 320 px/s flat
@@ -44,11 +45,15 @@ export const SURFACES = {
   mud:   { label: 'Mud',   speed: 0.84, jump: 0.88, drain: 1.25, dust: 0,   color: '#2c2014' }
 };
 
-// Placeholder trail pickups. Real per-race lists arrive at step 6 (race config `pickups`).
+// Trail pickup effects; each race's `pickups` config lists which of these appear on its trail.
 const PICKUPS = {
-  gel:        { label: 'Gel',        energy: 8,  hydration: 0 },
-  flask:      { label: 'Flask',      energy: 0,  hydration: 8 },
-  watermelon: { label: 'Watermelon', energy: 4,  hydration: 5 }
+  gel:        { label: 'Gel',         energy: 8,  hydration: 0 },
+  flask:      { label: 'Flask',       energy: 0,  hydration: 8 },
+  watermelon: { label: 'Watermelon',  energy: 4,  hydration: 5 },
+  saltTab:    { label: 'Salt tab',    energy: 0,  hydration: 6 },
+  bacon:      { label: 'Bacon',       energy: 10, hydration: 0 },
+  spamMusubi: { label: 'Spam musubi', energy: 12, hydration: 0 },
+  flatCoke:   { label: 'Flat Coke',   energy: 6,  hydration: 4 }
 };
 
 export function courseLoopMile(course, mile) {
@@ -80,8 +85,9 @@ function courseStartHour(course) {
 // Trail pickups are seeded by absolute index so each lap has its own set.
 export function pickupAt(i) {
   if (i < 1 || hash(i * 7 + 3) > SIM.PICKUP_CHANCE) return null;
-  const r = hash(i * 13 + 1);
-  return { i, type: r < 0.4 ? 'gel' : r < 0.7 ? 'flask' : 'watermelon', mile: i * SIM.PICKUP_SPACING + hash(i * 17 + 5) * 0.3 };
+  const list = (GAME.course && GAME.course.pickups) || ['gel', 'flask', 'watermelon'];
+  const type = list[Math.floor(hash(i * 13 + 1) * list.length)];
+  return { i, type, mile: i * SIM.PICKUP_SPACING + hash(i * 17 + 5) * 0.3 };
 }
 
 const hexToRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -148,6 +154,17 @@ export function simStep(dt) {
     GAME.floaters.push({ x: JON.X, y: RENDER.GROUND_Y + GAME.camY - 120, text: def.label, age: 0 });
   }
   for (let k = GAME.floaters.length - 1; k >= 0; k--) { const f = GAME.floaters[k]; f.age += dt; f.y -= 30 * dt; if (f.age > 1.2) GAME.floaters.splice(k, 1); }
+
+  // Landmarks: toast the real trail name as Jon passes it, every lap (race config `landmarks`).
+  if (c.landmarks) {
+    const L = c.structure.loopMiles;
+    for (const lm of c.landmarks) {
+      for (let k = Math.floor(prevMile / L); k <= Math.floor(GAME.mile / L); k++) {
+        const abs = k * L + lm.mile;
+        if (abs > prevMile && abs <= GAME.mile) toast(lm.label);
+      }
+    }
+  }
 
   // Speed: grade, surface, difficulty, bonk, stumble. animSpeed is Jon's apparent pace (drives legs and hair).
   const gradeFactor = g > 0 ? 1 / (1 + SIM.UP_K * g) : Math.min(SIM.DOWN_MAX, 1 + SIM.DOWN_K * -g);
