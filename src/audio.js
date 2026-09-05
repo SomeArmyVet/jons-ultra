@@ -34,7 +34,7 @@ export const AudioBed = {
     const t = this.ctx.currentTime, ramp = (p, v) => p.setTargetAtTime(v, t, 0.4);
     ramp(this.rain.gain, GAME.rain * 0.45);
     ramp(this.wind.gain, 0.05 + 0.04 * Math.abs(Math.sin(GAME.t * 0.4)) + 0.05 * GAME.rain);
-    ramp(this.insects.gain, GAME.night * 0.12 * (1 - GAME.rain));
+    ramp(this.insects.gain, GAME.night * 0.024 * (1 - GAME.rain));   // 0.12 × 0.2 — Michael: night insects toned down 80% (phase-1 carry-over)
   },
   footstep(surface) {
     if (!this.ready || this.muted) return;
