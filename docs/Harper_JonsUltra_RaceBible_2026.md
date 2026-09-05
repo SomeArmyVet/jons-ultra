@@ -19,30 +19,31 @@ Rule: the level must look and behave like the real course. Desert race = desert.
 
 ## 1. HURT 100 — Honolulu, Oahu, HI  ★ FIRST LEVEL
 
-Research pass: DONE (2026-09-05).
+Research pass: DONE (2026-09-05). Full pass 2026-09-05 against the Book of HURT 2024 (hurt100.com/wp-content/uploads/2023/05/BookofHURT2024.pdf — the last classic 5×20 edition), the official course map (hurt100.com/HURT100-map.pdf), the 2024 wrap-up (hurt100.com/2024/01/2024-hurt-100-wrap-up/) and finisher reports (brianbondy.com/blog/188). All VERIFYs cleared. Note: from 2026 the real course changed to a 2.5-mile lower loop + 5 × 19.5-mile revised loops; the game models the classic 5 × 20 course Jon ran.
 
-- Distance: 100 miles as 5 laps of a 20-mile loop. Mid-January.
-- Elevation: 300–1,900 ft; ~24,500 ft cumulative gain. Each lap = 3 climbs of roughly 1,500 ft each, 15 climbs total.
-- Surface: almost entirely technical single-track — roots (layered to knee height), rocks, clay baked or slick, mud of varying depth, hairpins. 20 stream crossings total (Mānoa and Nu'uanu streams, twice each per lap).
-- Aid stations (3, spaced 5.2–7.4 miles):
-  1. Makiki — start/finish, Hawai'i Nature Center, mile 0/20
-  2. Mānoa — Paradise Park, "Pirates" themed, ~mile 7.2
-  3. Nu'uanu — Judd Trail trailhead, ~mile 12.5; no crew access, no pacers may start here
-- Cutoff: 36 hours overall (VERIFY per-station cutoffs from current Book of HURT).
-- Start time: 6:00 AM Saturday (VERIFY).
-- Motto: "We wouldn't want it to be easy."
-- Landmarks per lap: Hogsback ridge, Pauoa Flats, bamboo forest (crackles in wind), Mānoa Falls trail, Nu'uanu / Jackass Ginger pool, the finish sign runners kiss (VERIFY tradition wording).
-- Real hazards: wild pigs (most active sunrise/sunset), slick moss rock at night, root webs, mud slides.
+- Distance: 100 miles as 5 laps of a 20-mile loop. Mid-January. Start 06:00 Saturday, race ends 18:00 Sunday (Book of HURT 2024 schedule — CONFIRMED).
+- Elevation: 300–1,900 ft; ~24,500 ft cumulative gain (GPS sampling ~100 m per the Book). Each lap = 3 climbs of ~1,200–1,600 ft (Hogsback→Mānoa Cliff, Aihualama→Pauoa Flats, Nu'uanu→Nahuina); 13 switchbacks down Aihualama after the Pauoa Flats roots. The level's elevation array interpolates between these documented anchors — swap in a GPX-derived profile if one lands (refinement, not a VERIFY).
+- Surface: almost entirely technical single-track — roots (layered to knee height), rocks, clay baked or slick, mud of varying depth, hairpins. 20 stream crossings: Mānoa and Nu'uanu streams each crossed twice per lap, close to their aid stations (CONFIRMED). Two road crossings per lap. The Pauoa Flats boardwalk is off-limits (slippery; marked blue).
+- Aid stations (3, spaced 5.2–7.4 miles; drop bags allowed at all three):
+  1. Makiki — start/finish, Hawai'i Nature Center, mile 0/20; pacers may start; crew OK
+  2. Mānoa — Paradise Park, mile ~7.2; pacers may start; crew OK
+  3. Nu'uanu — Judd Trail trailhead, mile ~12.5; NO crew, NO pacer starts (limited parking; violations can DQ the runner)
+- Cutoffs (CONFIRMED, 2024 Book): 36 h overall; intermediate cutoffs exist only on lap 5 — Makiki mile 80 at 29:00 (Sun 11:00), Mānoa mile 87 at 31:30 (13:30), Nu'uanu mile 92.5 at 33:30 (15:30), finish mile 100 at 36:00 (18:00). Stations close 15 min after their cutoff. (The book's lap-5 mileposts 87/92.5 imply legs of ~7.0/5.5/7.5; the stated 5.2–7.4 spacing and race reports support ~7.2/12.5 — the game uses 7.2/12.5.)
+- Sun/moon (Jan 13 2024): sunrise 07:11, sunset 18:03; dawn 06:47, dusk 18:32; moon 9.3% — effectively no moon under canopy (CONFIRMED).
+- Motto: "We wouldn't want it to be easy." (CONFIRMED — hurt100.com.)
+- Finish tradition (CONFIRMED): finishers ring the bell and kiss the sign that reads "We wouldn't want it to be easy," then get the buckle.
+- Landmarks per lap (official map names): Hogsback (Maunalaha Trail), Makiki Valley "Crossover", "Pipes", Mānoa Cliff, Pauoa Flats (the root web), bamboo forest, Aihualama switchbacks, Mānoa Falls, Bien's Bench, Judd Trail / Jackass Ginger pool, Nahuina, Kalāwahine.
+- Real hazards: wild pigs — roam the trails, most active sunrise/sunset, temperamental with dangerous tusks (CONFIRMED, Book wildlife section); slick moss rock at night, root webs, mud slides; mosquitoes and leptospirosis in the streams (flavour only).
 
 ### Level design
 - Loop structure: the same 20-mile loop repeats 5×; palette shifts with time of day so lap 3–4 are night. Lap counter in HUD ("Lap 3 of 5").
 - Weather: passing rain squalls; mist at elevation; mud deepens after rain.
-- Obstacles: root web (jump), fallen banyan limb (duck), slick rock slab (slide), stream crossing (timed jump on rocks or wade = hydration bonus, energy cost), mud pit (slow, must jump out).
-- Animals: wild boar (charges across trail at dawn/dusk), mongoose (darts under feet — small stumble), giant centipede (on root, bite = hit), feral chicken (harmless flavour), rat at night.
-- Pickups: local aid fare — spam musubi, poke, bacon, watermelon, saimin cup, flat Coke, salt tabs.
-- Pacer: joins at Makiki after lap 2 (VERIFY pacer rule mile).
-- Buckle tiers: sub-24 gold, sub-30 silver, finisher bronze (game tiers; HURT itself has no tiered buckle — VERIFY).
-- Palette: deep greens, wet black-brown earth, grey-blue mist by day; night is near-black green with headlamp amber and moon silver.
+- Obstacles: root web (jump), fallen banyan limb (duck), slick rock slab (slide/duck or stumble), stream crossing (timed jump on rocks or wade = hydration bonus, energy cost) at the four real crossing points per lap, mud pit (slow unless jumped).
+- Animals: wild boar (charges across trail at dawn/dusk), mongoose (darts under feet — small stumble), giant centipede (on root at night, bite = hit), feral chicken (harmless flavour), rat at night (harmless).
+- Pickups: local aid fare — spam musubi, bacon, watermelon, flat Coke, salt tabs, gels (poke and saimin stay at the aid-station tables, not as trail pickups).
+- Pacer (CONFIRMED): allowed after mile 60 (or from 17:00 Saturday); may start only at Mānoa or Makiki, never Nu'uanu; one at a time. Game: pacerFromMile 60, pacerStart false at Nu'uanu.
+- Buckles (CONFIRMED): HURT awards one buckle to every 100-mile finisher — no official tiers (selected finishers also get a custom belt). Gold/silver/bronze in the game are game-only tiers: sub-24 gold, sub-30 silver, finisher bronze.
+- Palette: deep greens, wet black-brown earth, grey-blue mist by day; night is near-black green with headlamp amber.
 
 ---
 
