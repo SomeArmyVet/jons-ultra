@@ -1,15 +1,15 @@
 # Jon's Ultra — Architecture
 
-Status: v0.3 (Sep 5 2026 — phase-2 trigger fixed to after step 5; schema gains sun/cutoffSchedule/bibNumber). Read before writing any code. Goal: adding a race never requires touching the engine.
+Status: v0.4 (Sep 5 2026 — phase 2 LIVE: split shipped, §3 lists the actual files; §4 gains `tortoise`). Read before writing any code. Goal: adding a race never requires touching the engine.
 
 ## 1. Delivery phases
 
-| Phase | Where | Form | Trigger to move on |
+| Phase | Where | Form | Status |
 |---|---|---|---|
-| 1 | Claude Project "Jon's Ultra" | Single-file HTML artifact `jons-ultra.html` | Step 5 (rainforest kit) shipped — decided 2026-09-05. Steps 6–8 and every later race are built in the repo. |
-| 2 | Claude Code repo + GitHub Pages | Multi-file: `index.html`, `src/engine.js`, `src/jon.js`, `src/biomes/*.js`, `races/*.json` | Ongoing |
+| 1 | Claude Project "Jon's Ultra" | Single-file HTML artifact `jons-ultra.html` | CLOSED at v0.5 (step 5 shipped 2026-09-05). Build archived in OneDrive 42.01/03-builds. |
+| 2 | Claude Code repo + GitHub Pages | Multi-file: `index.html`, `src/*.js` ES modules, `races/*.json` | **LIVE** since 2026-09-05 — the v0.5 split is verified identical to the monolith; steps 6–8 and every later race are built here. |
 
-Phase 1 code is written so the split in phase 2 is mechanical: every module below is already a separate section with a banner comment and no cross-section globals except the ones listed in §3.
+The split was mechanical as planned: each phase-1 section became one file, verified bit-identical against the monolith (sim state at miles 5/10/15/20 over 6,625 headless frames).
 
 ## 2. Stack
 
@@ -19,21 +19,24 @@ Phase 1 code is written so the split in phase 2 is mechanical: every module belo
 - `window.storage` (artifact key-value API) for persistence in phase 1; `localStorage` shim behind the same interface in phase 2.
 - Target: 60 fps on a 2020 laptop and a mid-range phone at 1280×720 logical resolution, DPR-aware.
 
-## 3. Modules (phase 1 = sections of one file, phase 2 = files)
+## 3. Modules (actual phase-2 files)
 
-1. `engine` — loop, timing, input, camera, collision (AABB + circle), scene stack.
-2. `render` — layer painter, parallax, palette interpolation, particles, screen shake, HUD.
-3. `jon` — procedural character: hair/beard/tattoo drawing, animation states, hitbox.
-4. `sim` — meters, race clock, cutoffs, aid-station logic, pacer, difficulty rules.
-5. `spawner` — reads the race config's hazard tables and elevation profile; emits obstacles, animals, pickups, weather with seeded RNG (seed = race id + attempt).
-6. `biomes/<kit>` — drawing functions for one biome kit: sky, ridges, vegetation, ground surface, foreground, particle set. One kit serves several races via palette.
-7. `hazards` — obstacle and animal behaviours (static, patrol, charge, ambush, dart, fly).
-8. `ui` — title, race select, intro card, aid card, finish, DNF, settings.
-9. `audio` — synth voices and ambient beds keyed by biome.
-10. `store` — save/load per race + difficulty.
-11. `races` — the race registry: one config object per race (§4).
+1. `src/engine.js` — loop, timing, input, camera, scene stack, boot; owns the three globals and the shared helpers (rng, hash, clamp, lerp, lerpTo, seg).
+2. `src/render.js` — layer painter, parallax, night overlay + headlamp cone, particles, race furniture (aid stations, finish line, crowd placement, pacer), HUD dispatch, screen shake.
+3. `src/jon.js` — procedural character: hair sim (verlet), beard/tattoo drawing, poses/gaits, hitbox; includes the character viewer (J key), keeping poses and hair internals module-private.
+4. `src/sim.js` — meters, race clock, course sampling (elevation/grade/surface), DIFFICULTY and SURFACES tables, palette blending, placeholder trail pickups.
+5. `src/race.js` — station list, cutoffs, aid stops, pacer, drop-bag bonuses, hit pipeline, DNF/finish, race reset.
+6. `src/spawner.js` — STUB until step 6: will read the race config's hazard tables and elevation profile; emits obstacles, animals, pickups, weather with seeded RNG (seed = race id + attempt).
+7. `src/hazards.js` — STUB until step 6: obstacle and animal behaviours (static, patrol, charge, ambush, dart, fly).
+8. `src/atmosphere.js` — sun/moon clocks, day/night keyframes, stars + shooting stars, rain/mist, ambient life, foot dust. Decoration only.
+9. `src/biomes/rainforest.js` + `src/biomes/index.js` — one file per kit (sky, ridges, vegetation, ground, foreground, palettes, life sets); `registerBiomes()` fills BIOMES at boot (registration at boot avoids import-cycle TDZ).
+10. `src/cast.js` — finish-line cast: drawKatie, drawEmma, drawTortoise, drawSpectator (cast sheet §7).
+11. `src/ui.js` — intro/aid/DNF/finish cards, HUD, buttons, toasts; title + race select arrive at step 7.
+12. `src/audio.js` — synth voices and ambient beds keyed by biome.
+13. `src/store.js` — save/load per race + difficulty (localStorage behind the phase-1 interface).
+14. `races/*.json` — the race registry: one config file per race (§4), fetched and registered at boot.
 
-Allowed globals: `GAME` (state), `RACES` (registry), `BIOMES` (kit registry). Nothing else.
+Allowed globals: `GAME` (state), `RACES` (registry), `BIOMES` (kit registry). Nothing else — everything further crosses files as ES module imports; the three globals are also mirrored on `window` for console debugging.
 
 ## 4. Race config schema
 
