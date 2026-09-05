@@ -6,6 +6,7 @@ import { SIM, DIFFICULTY, SURFACES, paletteAt, courseElev, courseSurface, pickup
 import { RACE, bonusActive } from './race.js';
 import { UI, UI_FONT, drawHUD, drawIntroCard, drawAidCard, drawDNFCard, drawFinishCard, drawToasts, drawPause } from './ui.js';
 import { parseHM, drawLife, drawRain } from './atmosphere.js';
+import { drawSpectator, drawKatie, drawEmma, drawTortoise } from './cast.js';
 
 export const RENDER = { GROUND_Y: 432 };   // ground line at ~60% of frame height
 
@@ -178,53 +179,6 @@ function drawAidStations(ctx, view) {
   }
 }
 
-// Spectator: simple standing figure, arms up on its own rhythm. Katie/Emma variants add glasses+fringe and a sign.
-const CROWD_TOPS = ['#c84a4a', '#3d7cc9', '#e0a33a', '#5aa36a', '#8b5cb8', '#e07a9a', '#2c9c9c', '#d96b3b'];
-function drawSpectator(ctx, x, y, s, seed2, t, who) {
-  const h1 = hash(seed2 * 31 + 7), h2 = hash(seed2 * 53 + 11), h3 = hash(seed2 * 71 + 3);
-  const skin = ['#C58E62', '#8d5a3b', '#e9b98f', '#6b4128'][Math.floor(h2 * 4)], top = CROWD_TOPS[Math.floor(h1 * CROWD_TOPS.length)];
-  const wave = Math.sin(t * 3.2 + h3 * Math.PI * 2);                  // staggered rhythm per person
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-  ctx.fillStyle = '#2b2b30'; ctx.fillRect(-7, -34, 5.5, 34); ctx.fillRect(1.5, -34, 5.5, 34);       // legs
-  ctx.fillStyle = top; ctx.beginPath(); ctx.roundRect(-10, -66, 20, 34, 4); ctx.fill();               // torso
-  ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0, -76, 9.5, 0, Math.PI * 2); ctx.fill();            // head
-  ctx.fillStyle = ['#3B2416', '#1A1A1A', '#8a5a2a', '#d9b06a'][Math.floor(h3 * 4)];
-  ctx.beginPath(); ctx.arc(0, -78, 10, Math.PI, Math.PI * 2); ctx.fill();                              // hair
-  if (who === 'katie') {                                                 // glasses + fringe (from your brief; rest awaits the cast sheet)
-    ctx.fillStyle = '#3B2416'; ctx.fillRect(-10, -80, 20, 6);
-    ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(-4, -74, 3.2, 0, Math.PI * 2); ctx.arc(4, -74, 3.2, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-0.8, -74); ctx.lineTo(0.8, -74); ctx.stroke();
-  }
-  // arms: up when the wave is high, otherwise down at the sides
-  const up = who ? 0.75 + 0.25 * wave : 0.5 + 0.5 * wave;
-  ctx.strokeStyle = skin; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
-  for (const side of [-1, 1]) {
-    const a = lerp(0.3, 2.6, who ? (side < 0 ? up : 1 - up * 0.3) : up) * side;   // Katie/Emma: one arm holds, the other waves
-    ctx.beginPath(); ctx.moveTo(side * 9, -62); ctx.lineTo(side * 9 + Math.sin(a) * 22 * side, -62 + Math.cos(a) * 22); ctx.stroke();
-  }
-  if (who === 'emma') {                                                  // the GO JON sign, held high
-    ctx.fillStyle = '#F2F0E6'; ctx.fillRect(-26, -122, 52, 30);
-    ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.5; ctx.strokeRect(-26, -122, 52, 30);
-    ctx.fillStyle = '#c84a4a'; ctx.font = '700 14px ' + UI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('GO JON', 0, -107);
-    ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-2, -92, 4, 30);
-  }
-  ctx.restore();
-}
-// Placeholder tortoise. The cast sheet decides who this is; for the test loop it sits at the foot of the finish post, near side.
-function drawTortoise(ctx, x, y, t) {
-  ctx.save(); ctx.translate(x, y);
-  ctx.fillStyle = '#5a6b3a'; ctx.beginPath(); ctx.ellipse(0, -8, 16, 10, 0, Math.PI, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#3d4a26'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.moveTo(0, -17); ctx.lineTo(0, -8); ctx.moveTo(-5, -15); ctx.lineTo(-5, -9); ctx.moveTo(5, -15); ctx.lineTo(5, -9); ctx.stroke();
-  ctx.fillStyle = '#8c9a5a';
-  ctx.fillRect(-13, -8, 6, 6); ctx.fillRect(7, -8, 6, 6);
-  const bob = Math.sin(t * 1.5) * 1.2;
-  ctx.beginPath(); ctx.ellipse(19, -10 + bob, 5.5, 4, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1A1A1A'; ctx.beginPath(); ctx.arc(21, -11 + bob, 0.9, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-
 // Finish line: banner over the trail, tape until it's broken, crowd on both sides, Katie and Emma front row near side.
 export function finishAbsMile() { return GAME.stations[GAME.stations.length - 1].absMile; }
 function drawFinishLine(ctx, view, t, layer) {
@@ -236,7 +190,7 @@ function drawFinishLine(ctx, view, t, layer) {
     for (let i = 0; i < RACE.CROWD_N; i++) {
       if (hash(i * 19 + 1) > 0.5) continue;
       const dx = -RACE.CROWD_PX + hash(i * 23 + 5) * (RACE.CROWD_PX + 60);
-      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) - 10, 0.9, i, t, null);
+      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) - 10, 0.9, i, t);
     }
     // posts + banner
     ctx.fillStyle = '#6a5a3a'; ctx.fillRect(fx - 3, gy - 190, 6, 190); ctx.fillRect(fx + 84 - 3, gy - 190, 6, 190);
@@ -253,22 +207,38 @@ function drawFinishLine(ctx, view, t, layer) {
       ctx.beginPath(); ctx.moveTo(fx + 84, gy - 70); ctx.quadraticCurveTo(fx + 74, gy - 40 - fl, fx + 80, gy - 10); ctx.stroke();
     }
   } else {
-    // near-side crowd (in front of the trail), Katie and Emma front row, tortoise at the post
+    // near-side crowd (in front of the trail), Katie and Emma front row, tortoise per the race config
     for (let i = 0; i < RACE.CROWD_N; i++) {
       if (hash(i * 19 + 1) <= 0.5) continue;
       const dx = -RACE.CROWD_PX + hash(i * 23 + 5) * (RACE.CROWD_PX + 60);
       if (dx > -110 && dx < -20) continue;                                 // leave the front-row spot for Katie and Emma
-      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) + 14, 1.05, i + 100, t, null);
+      const x = fx + dx; drawSpectator(ctx, x, view.groundAt(x) + 14, 1.05, i + 100, t);
     }
+    // Katie and Emma bounce only when the camera starts easing toward them (cast sheet §4.3).
+    const cheer = finishZoom();
     const ke = katieEmmaScreen(view);
-    drawSpectator(ctx, ke.katie.x, ke.katie.y, 1.08, 501, t, 'katie');
-    drawSpectator(ctx, ke.emma.x, ke.emma.y, 1.0, 502, t, 'emma');
+    drawKatie(ctx, ke.katie.x, ke.katie.y, 1.08, t, cheer);
+    drawEmma(ctx, ke.emma.x, ke.emma.y, 1.0, t, cheer);
+    drawFinishTortoise(ctx, view, fx, gy, t);
+  }
+}
+// Tortoise placement comes from the race config (`tortoise.where`, cast sheet §5/§7). "aidTable" draws the
+// finish aid table with him underneath, one leg mid-step; anything else falls back to the finish post.
+function drawFinishTortoise(ctx, view, fx, gy, t) {
+  const where = (GAME.course.tortoise && GAME.course.tortoise.where) || 'post';
+  if (where === 'aidTable') {
+    const tx = fx + 150, ty = view.groundAt(tx) + 14;
+    ctx.fillStyle = '#8a6a3a'; ctx.fillRect(tx - 28, ty - 26, 56, 5); ctx.fillRect(tx - 24, ty - 21, 4, 20); ctx.fillRect(tx + 20, ty - 21, 4, 20);
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#F5D021' : '#7FD1FF'; ctx.fillRect(tx - 22 + k * 12, ty - 34, 6, 8); }
+    drawTortoise(ctx, tx - 2, ty, t);
+  } else {
     drawTortoise(ctx, fx + 14, gy + 16, t);
   }
 }
+// Katie is closest to the finish tape (cast sheet §2); Emma stands beside her.
 function katieEmmaScreen(view) {
   const fx = absMileToScreenX(finishAbsMile());
-  return { katie: { x: fx - 78, y: view.groundAt(fx - 78) + 14 }, emma: { x: fx - 44, y: view.groundAt(fx - 44) + 14 } };
+  return { katie: { x: fx - 44, y: view.groundAt(fx - 44) + 14 }, emma: { x: fx - 78, y: view.groundAt(fx - 78) + 14 } };
 }
 // Camera ease toward Katie and Emma over the last ZOOM_LEAD_S seconds, held through the finish.
 function finishZoom() {

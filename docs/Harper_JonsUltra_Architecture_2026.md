@@ -65,6 +65,8 @@ Every race is one object. Adding a race = adding one object and, if needed, one 
     { name: "Nu'uanu (Judd Trail)", mile: 12.5, cutoffHours: null, dropBag: true, pacerStart: false, crew: false }
   ],
   rules: { pacersAllowed: true, pacerFromMile: 40, crewAllowed: true },
+  tortoise: { where: "aidTable" },     // finish-line easter egg placement: "aidTable" | "trail" | "tote" | "rock" | "lap" (cast sheet §5/§7); pick one per race, vary it
+
   hazards: {
     obstacles: [ { type: "rootWeb", weight: 5, surfaces: ["roots"] }, { type: "streamCrossing", weight: 2, atMiles: [6.8, 7.6, 12.1, 12.9] }, ... ],
     animals:   [ { type: "boar", weight: 3, time: ["dawn", "dusk"] }, { type: "mongoose", weight: 4 }, { type: "centipede", weight: 2, time: ["night"] } ],

@@ -18,6 +18,7 @@
   ],
   "cutoffSchedule": [[0, 0], [20, 12], [40, 22], [60, 30], [80, 34.5], [100, 36]],
   "rules": { "pacersAllowed": true, "pacerFromMile": 40, "crewAllowed": true },
+  "tortoise": { "where": "aidTable" },
   "buckles": { "gold": 24, "silver": 30, "bronze": 36 },
   "introFacts": [
     "Synthetic 20-mile loop with three ~1,500 ft climbs.",
