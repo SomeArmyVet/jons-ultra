@@ -6,8 +6,8 @@ import { SIM, DIFFICULTY, SURFACES, paletteAt, courseElev, courseSurface, pickup
 import { RACE, bonusActive } from './race.js';
 import { UI, UI_FONT, drawHUD, drawIntroCard, drawAidCard, drawDNFCard, drawFinishCard, drawToasts, drawPause } from './ui.js';
 import { parseHM, drawLife, drawRain } from './atmosphere.js';
-import { drawSpectator, drawKatie, drawEmma, drawTortoise, finishCrowdLayout } from './cast.js';
-import { drawHazards } from './hazards.js';
+import { drawSpectator, drawKatie, drawEmma, drawTortoise, finishCrowdLayout, castScale } from './cast.js';
+import { drawHazards, drawMarchersRidge, drawMarchersDark } from './hazards.js';
 
 export const RENDER = { GROUND_Y: 432 };   // ground line at ~60% of frame height
 
@@ -37,6 +37,7 @@ export function render(ctx, tReal) {
   }
   kit.sky(ctx, pal, t, view);
   kit.farRidge(ctx, pal, t, view);
+  drawMarchersRidge(ctx, view, t);
   drawLife(ctx, t, 'sky', view);
   kit.midRidge(ctx, pal, t, view);
   drawLife(ctx, t, 'mid', view);
@@ -63,6 +64,7 @@ export function render(ctx, tReal) {
   drawLife(ctx, t, 'near', view);                                   // fireflies and moths are light sources: over the darkness
   drawLife(ctx, t, 'fore', view);
   drawMeterEffects(ctx, t);
+  drawMarchersDark(ctx, ENGINE.W, ENGINE.H);
   ctx.restore();
   drawHUD(ctx);
   UI.buttons = [];
@@ -229,12 +231,12 @@ function drawFinishLine(ctx, view, t, layer) {
   if (fx < -300 || fx > view.W + 400) return;
   const gy = view.groundAt(fx);
   if (layer === 'back') {
-    // back row, far side of the trail: 80% size, darker (cast sheet §6)
+    // back row, far side of the trail: 0.75 × Jon's height, darker (cast sheet §6)
     for (const c of finishCrowdLayout()) {
       if (c.row !== 'back') continue;
       const x = fx + c.dx;
       if (x < -40 || x > view.W + 40) continue;
-      drawSpectator(ctx, x, view.groundAt(x) - 10, c.scale, c.seed, t, true);
+      drawSpectator(ctx, x, view.groundAt(x) - 10, c.rel * castScale('back'), c.seed, t, true);
     }
     // posts + banner
     ctx.fillStyle = '#6a5a3a'; ctx.fillRect(fx - 3, gy - 190, 6, 190); ctx.fillRect(fx + 84 - 3, gy - 190, 6, 190);
@@ -260,18 +262,18 @@ function drawFinishLine(ctx, view, t, layer) {
       ctx.beginPath(); ctx.moveTo(fx + 84, gy - 70); ctx.quadraticCurveTo(fx + 74, gy - 40 - fl, fx + 80, gy - 10); ctx.stroke();
     }
   } else {
-    // front row, near side: full size, floodlit; Katie and Emma keep a clear gap either side
+    // front row, near side: 0.9 × Jon's height, floodlit; Katie and Emma keep a clear gap either side
     for (const c of finishCrowdLayout()) {
       if (c.row !== 'front') continue;
       const x = fx + c.dx;
       if (x < -40 || x > view.W + 40) continue;
-      drawSpectator(ctx, x, view.groundAt(x) + 14, c.scale, c.seed, t, false);
+      drawSpectator(ctx, x, view.groundAt(x) + 14, c.rel * castScale('front'), c.seed, t, false);
     }
-    // Katie and Emma bounce only when the camera starts easing toward them (cast sheet §4.3).
+    // Katie and Emma bounce only when the camera starts easing toward them (cast sheet §4).
     const cheer = finishZoom();
     const ke = katieEmmaScreen(view);
-    drawKatie(ctx, ke.katie.x, ke.katie.y, 1.08, t, cheer);
-    drawEmma(ctx, ke.emma.x, ke.emma.y, 1.0, t, cheer);
+    drawKatie(ctx, ke.katie.x, ke.katie.y, castScale('front'), t, cheer);
+    drawEmma(ctx, ke.emma.x, ke.emma.y, castScale('front') * 0.95, t, cheer);
     drawFinishTortoise(ctx, view, fx, gy, t);
   }
 }

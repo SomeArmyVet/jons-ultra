@@ -4,6 +4,15 @@
 // Emma = long wavy hair + phone held up recording. Nobody else has either, and only those two get
 // their own wave timing. Crowd faces stay featureless. No brand marks, no text anywhere.
 import { hash, lerp } from './engine.js';
+import { JON } from './jon.js';
+
+// Spectator figure height in local units (feet to hair top). Crowd size is always derived from Jon's
+// live height — front row 0.9 × Jon, back row 0.75 × Jon (Michael 2026-09-05) — never a fixed px, so
+// the [ ] Jon-size keys rescale the crowd with him.
+const CAST_UNITS = 90;
+export function castScale(row) {
+  return (row === 'front' ? 0.9 : 0.75) * JON.TARGET_PX / CAST_UNITS;
+}
 
 const CAST = {
   KATIE: { skin: '#ecc5a4', hair: '#241811', tee: '#3a3a40', jeans: '#4f6d99', boot: '#1A1A1A', frame: '#141414', lens: '#5a5049' },
@@ -24,20 +33,27 @@ function dk(hex, f) {
 
 // --- crowd layout (cast sheet §6): 18–24 over the last ~500 px, two depth rows, irregular gaps,
 // height ±15%, front-row slots wide enough that nobody overlaps. Katie and Emma keep a clear space.
+// `rel` is the ±15% per-person height variance; the row's absolute scale comes from castScale() at draw
+// time. Kid-on-shoulders figures are capped at 1.0 so no head ever reaches the FINISH banner.
 let crowdCache = null;
+function relFor(seed, h) {
+  const pose = POSES[Math.floor(hash(seed * 97 + 13) * POSES.length)];
+  const rel = 1 + (h - 0.5) * 0.3;
+  return pose === 'shoulders' ? Math.min(rel, 1) : rel;
+}
 export function finishCrowdLayout() {
   if (crowdCache) return crowdCache;
   const list = [];
-  for (let i = 0; i < 13; i++) {                                        // front row: full size, floodlit
+  for (let i = 0; i < 13; i++) {                                        // front row: floodlit, 0.9 × Jon
     if (hash(i * 631 + 17) < 0.14) continue;                            // gaps
     const dx = -500 + i * 45 + (hash(i * 907 + 3) - 0.5) * 16;
     if (dx > -115 && dx < -8) continue;                                 // Katie and Emma's clear space
-    list.push({ dx, row: 'front', scale: 1 + (hash(i * 389 + 7) - 0.5) * 0.3, seed: i + 100 });
+    list.push({ dx, row: 'front', rel: relFor(i + 100, hash(i * 389 + 7)), seed: i + 100 });
   }
-  for (let i = 0; i < 15; i++) {                                        // back row: 80% size, darker
+  for (let i = 0; i < 15; i++) {                                        // back row: 0.75 × Jon, darker
     if (hash(i * 733 + 29) < 0.1) continue;
     const dx = -520 + i * 38 + (hash(i * 1013 + 11) - 0.5) * 16;
-    list.push({ dx, row: 'back', scale: 0.8 * (1 + (hash(i * 449 + 5) - 0.5) * 0.3), seed: i });
+    list.push({ dx, row: 'back', rel: relFor(i, hash(i * 449 + 5)), seed: i });
   }
   crowdCache = list;
   return list;

@@ -43,7 +43,7 @@ Jon crosses the finish line into a cheering crowd. Two people in that crowd must
 
 ## 6. Generic crowd
 
-- 18–24 spectators over the last ~500 px before the tape, on BOTH sides of the trail, in two depth rows: front row full size and floodlit, back row 80% size and darker.
+- 18–24 spectators over the last ~500 px before the tape, on BOTH sides of the trail, in two depth rows: front row 0.9 × Jon's height and floodlit, back row 0.75 × Jon's height and darker. Sizes are always derived from Jon's live height (JON.TARGET_PX), never a fixed px, so the crowd rescales with him.
 - Irregular spacing with gaps; height varies ±15%; no overlaps in the front row.
 - 6+ poses cycling through the crowd: arms up, clapping, phone held up, cowbell, kid on shoulders, one sitting on a cooler. Staggered per-person rhythm.
 - Faces stay featureless — hair + skin + clothes only. Katie's glasses and Emma's phone are the only face-adjacent props, consistent with Jon having no face beyond glasses and beard.

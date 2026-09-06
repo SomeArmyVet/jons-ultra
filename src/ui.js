@@ -2,7 +2,7 @@
 // Cards, HUD, buttons, toasts. Title and race select arrive at step 7.
 import { ENGINE, GAME, clamp } from './engine.js';
 import { DIFFICULTY, SURFACES, courseElev, courseLoopMile } from './sim.js';
-import { nextStation, ITEM_LABEL, buckleFor, finishSummaryText, resetRace } from './race.js';
+import { RACE, nextStation, ITEM_LABEL, buckleFor, finishSummaryText, resetRace } from './race.js';
 import { JON } from './jon.js';
 import { AudioBed } from './audio.js';
 
@@ -84,18 +84,23 @@ export function drawDNFCard(ctx) {
   button(ctx, r.x + 36, r.y + r.h - 70, 160, 44, 'Restart  (Enter)', 'restart', true);
   button(ctx, r.x + 216, r.y + r.h - 70, 160, 44, 'Race select', 'select', false);
 }
+// Slides in on the right 45% of the frame after the celebration, leaving Jon and the near-side crowd
+// visible (Michael 2026-09-05).
 export function drawFinishCard(ctx) {
-  const f = GAME.finish, c = GAME.course, r = card(ctx, 640, 340, 860), h = f.raceSec / 3600;
+  const f = GAME.finish, c = GAME.course, h = f.raceSec / 3600;
+  const slide = clamp((f.t - RACE.FINISH_HOLD_S) / 0.45, 0, 1), ease = 1 - Math.pow(1 - slide, 3);
+  const w = 500, cx = ENGINE.W - w / 2 - 24 + (1 - ease) * (w + 60);
+  const r = card(ctx, w, 320, cx);
   ctx.fillStyle = '#D8E24A'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = '700 34px ' + UI_FONT; ctx.fillText('Finisher', r.x + 36, r.y + 46);
-  ctx.fillStyle = '#eaf3e4'; ctx.font = '700 26px ' + UI_FONT; ctx.fillText(`${fmtClock(f.raceSec)}   ·   ${buckleFor(c, h)} buckle`, r.x + 36, r.y + 92);
-  ctx.font = '16px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.85)';
-  ctx.fillText(`Hits taken: ${GAME.stats.hits}     Bonks: ${GAME.stats.bonks}     Night miles: ${GAME.stats.nightMiles.toFixed(1)}`, r.x + 36, r.y + 134);
-  ctx.fillText(`${DIFFICULTY[GAME.diff].label} mode`, r.x + 36, r.y + 162);
-  ctx.fillStyle = '#eaf3e4'; ctx.font = '600 17px ' + UI_FONT; ctx.fillText('Katie and Emma were at the line.', r.x + 36, r.y + 206);
-  button(ctx, r.x + 36, r.y + r.h - 70, 160, 44, 'Restart  (Enter)', 'restart', true);
-  button(ctx, r.x + 216, r.y + r.h - 70, 160, 44, 'Race select', 'select', false);
-  button(ctx, r.x + 396, r.y + r.h - 70, 200, 44, 'Share as text', 'share', false);
+  ctx.font = '700 28px ' + UI_FONT; ctx.fillText('Finisher', r.x + 26, r.y + 40);
+  ctx.fillStyle = '#eaf3e4'; ctx.font = '700 22px ' + UI_FONT; ctx.fillText(`${fmtClock(f.raceSec)}   ·   ${buckleFor(c, h)} buckle`, r.x + 26, r.y + 80);
+  ctx.font = '14px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.85)';
+  ctx.fillText(`Hits taken: ${GAME.stats.hits}     Bonks: ${GAME.stats.bonks}     Night miles: ${GAME.stats.nightMiles.toFixed(1)}`, r.x + 26, r.y + 118);
+  ctx.fillText(`${DIFFICULTY[GAME.diff].label} mode`, r.x + 26, r.y + 144);
+  ctx.fillStyle = '#eaf3e4'; ctx.font = '600 15px ' + UI_FONT; ctx.fillText('Katie and Emma were at the line.', r.x + 26, r.y + 184);
+  button(ctx, r.x + 24, r.y + r.h - 66, 140, 44, 'Restart  (Enter)', 'restart', true);
+  button(ctx, r.x + 176, r.y + r.h - 66, 130, 44, 'Race select', 'select', false);
+  button(ctx, r.x + 318, r.y + r.h - 66, 158, 44, 'Share as text', 'share', false);
 }
 export function drawToasts(ctx) {
   ctx.font = '600 15px ' + UI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

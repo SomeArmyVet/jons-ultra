@@ -14,6 +14,9 @@
   "sun": { "rise": "07:11", "set": "18:03" },
   "bibNumber": "254",
   "poles": true,
+  "targetMinutes": 10,
+  "drainMul": { "energy": 1.8, "hydration": 2.5 },
+  "lore": { "nightMarchers": true },
   "aidStations": [
     { "name": "Makiki (Nature Center)", "mile": 0, "cutoffHours": [null, null, null, 29, 36], "dropBag": true, "pacerStart": true, "crew": true },
     { "name": "Mānoa (Paradise Park)", "mile": 7.2, "cutoffHours": [null, null, null, null, 31.5], "dropBag": true, "pacerStart": true, "crew": true },
@@ -54,10 +57,11 @@
       { "type": "streamCrossing", "atMiles": [6.8, 7.6, 12.1, 12.9] }
     ],
     "animals": [
-      { "type": "boar", "weight": 3, "time": ["dawn", "dusk"] },
+      { "type": "pig", "weight": 3, "time": ["dawn", "dusk"] },
       { "type": "mongoose", "weight": 4 },
-      { "type": "centipede", "weight": 2, "time": ["night"] },
       { "type": "chicken", "weight": 2 },
+      { "type": "wallaby", "weight": 2, "time": ["dawn", "dusk", "night"] },
+      { "type": "centipede", "weight": 2, "time": ["night"] },
       { "type": "rat", "weight": 2, "time": ["night"] }
     ],
     "weather": [

@@ -69,6 +69,9 @@ Every race is one object. Adding a race = adding one object and, if needed, one 
   ],
   rules: { pacersAllowed: true, pacerFromMile: 60, crewAllowed: true },
   poles: true,                         // Jon carries poles in this race (false only for Across the Years)
+  targetMinutes: 10,                   // design minutes for one lap as played (Realistic); scales world speed AND race clock together, so raceSec-per-mile (cutoffs, day/night) is invariant
+  drainMul: { energy: 1.8, hydration: 2.5 },   // per-race climate: HURT humidity (defaults 1)
+  lore: { nightMarchers: true },       // Hawaiian races only: Huakaʻi Pō lore hazard (Race Bible §1)
   tortoise: { where: "aidTable" },     // finish-line easter egg placement: "aidTable" | "trail" | "tote" | "rock" | "lap" (cast sheet §5/§7); pick one per race, vary it
 
   hazards: {

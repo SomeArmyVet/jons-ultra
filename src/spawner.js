@@ -5,10 +5,14 @@
 import { rng } from './engine.js';
 import { courseSurface, courseLoopMile } from './sim.js';
 
+// Density ×3 (Michael's feel pass 2026-09-05): ≈ one obstacle per 0.25 mi overall, roots denser still,
+// animals ×3. MIN_GAP keeps clusters readable — at the new pace it is ~0.7 s between obstacles, and a
+// full-hold jump covers ~0.07 mi, so back-to-back obstacles stay dodgeable.
 const SPAWN = {
   START_MILE: 0.4,                  // clear runway out of the start
-  OB_STEP: 0.22, OB_CHANCE: 0.7,    // rolls per slot; surface-filter misses thin this to ≈ one per 0.6 mi
-  AN_STEP: 0.8, AN_CHANCE: 0.5,     // ≈ one animal per 1.6 mi (time windows thin this further)
+  OB_STEP: 0.08, OB_CHANCE: 0.75,   // rolls per slot; surface-filter misses thin this to ≈ one per 0.25 mi
+  ROOTS_STEP: 0.12, ROOTS_CHANCE: 0.5,   // extra root webs on roots surfaces — the HURT signature
+  AN_STEP: 0.27, AN_CHANCE: 0.5,    // ≈ one animal per 0.55 mi (time windows thin this further)
   MIN_GAP: 0.06,                    // no two rolled obstacles closer than this (≈ 320 px)
   STATION_CLEAR: 0.15               // nothing spawns this close to an aid station
 };
@@ -58,6 +62,15 @@ export function spawnCourse(course, attempt) {
     const def = pickWeighted(weighted, pick);
     if (def.surfaces && !def.surfaces.includes(courseSurface(course, mm))) continue;
     obstacles.push({ type: def.type, mile: mm });
+  }
+  // extra pass: root webs stack up on roots surfaces (Pauoa Flats should feel like Pauoa Flats)
+  const rootDef = weighted.find(o => o.type === 'rootWeb');
+  if (rootDef) for (let m = SPAWN.START_MILE; m < total - 0.1; m += SPAWN.ROOTS_STEP) {
+    const roll = R(), place = R();
+    if (roll > SPAWN.ROOTS_CHANCE) continue;
+    const mm = m + place * SPAWN.ROOTS_STEP * 0.8;
+    if (nearStation(course, mm) || courseSurface(course, mm) !== 'roots') continue;
+    obstacles.push({ type: 'rootWeb', mile: mm });
   }
   // animals: sparser; time-of-day windows are checked at encounter time by hazards.js
   const aList = H.animals || [];

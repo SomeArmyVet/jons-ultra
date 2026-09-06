@@ -19,14 +19,19 @@ export const SIM = {
   GAIT_ON: 0.05, GAIT_OFF: 0.03,
   JUMP_GRADE_K: 1.6,
   STUMBLE_S: 0.55, STUMBLE_SPEED: 0.4,
-  PICKUP_SPACING: 0.6, PICKUP_CHANCE: 0.6, PICKUP_REACH_PX: 40   // reach = max jump height at which a trail pickup is still grabbed
+  PICKUP_SPACING: 0.6, PICKUP_CHANCE: 0.6, PICKUP_REACH_PX: 40,  // reach = max jump height at which a trail pickup is still grabbed
+  // Pace is data: a race's `targetMinutes` is the design minutes for one lap as played (Realistic).
+  // BASE_LAP_MIN is the measured as-played HURT lap at v0.6 base tuning (Michael's playtest, 2026-09-05).
+  // paceMul scales BOTH world speed and the race clock, so raceSec-per-mile — cutoffs, day/night —
+  // is untouched; the game just runs proportionally faster.
+  BASE_LAP_MIN: 14
 };
 
 // Meters drain by distance. Base rates are Realistic; DIFFICULTY scales them.
 const METERS = {
   ENERGY_PER_MILE: 7, HYDRATION_PER_MILE: 5,
   ENERGY_GRADE_K: 4,          // ×(1 + K·grade) on climbs
-  HEAT_K: 0.6                 // hydration ×(1 + K·midday) — midday = 1 at 12:00, 0 at dawn/dusk
+  HEAT_K: 1.0                 // hydration ×(1 + K·midday) — midday = 1 at 12:00, 0 at dawn/dusk (raised 2026-09-05: heat bites harder)
 };
 
 // Design Bible §6: difficulty is data. The sim reads the active table; no if (arcade) anywhere else.
@@ -122,14 +127,17 @@ export function simStep(dt) {
   const surf = SURFACES[GAME.surface], g = GAME.grade;
 
   // Race clock: real seconds per game second, so day/night and cutoffs match the real event in either mode.
-  GAME.raceSec += sdt * D.timeScale;
+  // paceMul scales clock and speed together, keeping raceSec-per-mile — and every cutoff — invariant.
+  GAME.raceSec += sdt * D.timeScale * GAME.paceMul;
   GAME.hour = (courseStartHour(c) + GAME.raceSec / 3600) % 24;
   GAME.night = nightAmount(GAME.hour);
 
-  // Meters: empty energy = bonk, empty hydration = cramp.
+  // Meters: empty energy = bonk, empty hydration = cramp. Per-race climate multipliers come from the
+  // config's drainMul (HURT: Hawaiian humidity — hydration ×2.5, energy ×1.8, Michael 2026-09-05).
+  const dm = c.drainMul || {};
   const dMiles = Math.max(0, GAME.mile - prevMile);
-  GAME.energy = clamp(GAME.energy - dMiles * METERS.ENERGY_PER_MILE * D.energyDrain * (1 + METERS.ENERGY_GRADE_K * Math.max(0, g)) * surf.drain, 0, 100);
-  GAME.hydration = clamp(GAME.hydration - dMiles * METERS.HYDRATION_PER_MILE * D.hydrationDrain * (1 + METERS.HEAT_K * middayAmount(GAME.hour)) * (bonusActive('iceBandana') ? RACE.BANDANA_DRAIN_MUL : 1), 0, 100);
+  GAME.energy = clamp(GAME.energy - dMiles * METERS.ENERGY_PER_MILE * (dm.energy || 1) * D.energyDrain * (1 + METERS.ENERGY_GRADE_K * Math.max(0, g)) * surf.drain, 0, 100);
+  GAME.hydration = clamp(GAME.hydration - dMiles * METERS.HYDRATION_PER_MILE * (dm.hydration || 1) * D.hydrationDrain * (1 + METERS.HEAT_K * middayAmount(GAME.hour)) * (bonusActive('iceBandana') ? RACE.BANDANA_DRAIN_MUL : 1), 0, 100);
   GAME.bonk = GAME.energy <= 0;
   if (GAME.bonk && !prevBonk) GAME.stats.bonks++;
   if (GAME.night > 0.5) GAME.stats.nightMiles += dMiles;
@@ -168,7 +176,7 @@ export function simStep(dt) {
 
   // Speed: grade, surface, difficulty, bonk, stumble. animSpeed is Jon's apparent pace (drives legs and hair).
   const gradeFactor = g > 0 ? 1 / (1 + SIM.UP_K * g) : Math.min(SIM.DOWN_MAX, 1 + SIM.DOWN_K * -g);
-  let target = SIM.FLAT_SPEED * gradeFactor * surf.speed * D.speedMul;
+  let target = SIM.FLAT_SPEED * GAME.paceMul * gradeFactor * surf.speed * D.speedMul;
   if (g > 0 && bonusActive('poles')) target *= RACE.POLES_CLIMB_MUL;
   if (GAME.bonk) target *= D.bonkSpeed;
   if (j.stumbleT > 0) target *= SIM.STUMBLE_SPEED;

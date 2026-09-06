@@ -1,7 +1,7 @@
 // ===== MODULE: race =====
 // Aid stations, cutoffs, pacer, DNF, finish. Everything reads the course config; nothing names a race.
 import { GAME, Input, clamp, lerp } from './engine.js';
-import { DIFFICULTY, simStep } from './sim.js';
+import { SIM, DIFFICULTY, simStep } from './sim.js';
 import { JON, makeJon } from './jon.js';
 import { AudioBed } from './audio.js';
 import { toast, fmtClock } from './ui.js';
@@ -10,7 +10,7 @@ import { spawnCourse } from './spawner.js';
 export const RACE = {
   AID_CARD_ARCADE_S: 0.8,       // Arcade: no stop, card flashes for this long
   SKIP_REFILL_MIN: 0.15,        // Space at an aid stop still gives at least this fraction of the refill
-  FINISH_HOLD_S: 1.6,           // arms-up beat before the finish card
+  FINISH_HOLD_S: 3,             // the celebration plays before the card slides in (Michael 2026-09-05)
   FINISH_ZOOM: 0.35, ZOOM_LEAD_S: 2,
   BATTERY_LAMP_MUL: 1.4, BANDANA_DRAIN_MUL: 0.6, POLES_CLIMB_MUL: 1.08,
   PACER_X_OFFSET: -125, PACER_CALLOUT_PX: 420,
@@ -135,6 +135,8 @@ export function resetRace() {
   // Per-race character flags come from the config (character sheet: poles off only for Across the Years).
   JON.BIB = String(GAME.course.bibNumber || '254');
   JON.POLES = GAME.course.poles !== false;
+  // Pace from targetMinutes (SIM.BASE_LAP_MIN comment explains the derivation); 1 when unset.
+  GAME.paceMul = GAME.course.targetMinutes ? SIM.BASE_LAP_MIN / GAME.course.targetMinutes : 1;
   GAME.scroll = 0; GAME.mile = 0; GAME.lap = 1; GAME.raceSec = 0; GAME.speed = 0; GAME.camY = 0;
   GAME.energy = 100; GAME.hydration = 100; GAME.bonk = false; GAME.cramp = false; GAME.crampTimer = 4;
   GAME.collected = new Set(); GAME.floaters = []; GAME.toasts = []; GAME.particles = [];
@@ -146,6 +148,7 @@ export function resetRace() {
   GAME.attempt = (GAME.attempt || 0) + 1;
   GAME.spawn = spawnCourse(GAME.course, GAME.attempt);
   GAME.critters = []; GAME.obIdx = 0; GAME.anIdx = 0; GAME.segHits = 0; GAME.slowT = 0; GAME.slowK = 1;
+  GAME.marchers = { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, dark: 0, wasNight: false };
   GAME.jon = makeJon(); GAME.jon.lastGroundedAt = performance.now();
   GAME.fast = false;
   simStep(0);
