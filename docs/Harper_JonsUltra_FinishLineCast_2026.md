@@ -1,4 +1,4 @@
-# Jon's Ultra — Cast
+# Switchbacks — Cast
 
 Status: v0.3 (Sep 5 2026 — scope renamed from Finish-Line Cast to Cast: Katie now also crews aid stations, 6e). Previously v0.2 (Emma's sign dropped for the raised phone, floodlights, two-row crowd). Requested by Michael for the finish sequence (Design Bible §10 screen 6 and Architecture §9 step 4). Read when building the finish screen. Reference photos of Katie and Emma live in `02-jon-reference/`; they are for likeness checks only, never traced or embedded.
 

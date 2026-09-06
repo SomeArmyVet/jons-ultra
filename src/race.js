@@ -141,7 +141,7 @@ export function buckleFor(course, hours) {
 }
 export function finishSummaryText() {
   const c = GAME.course, f = GAME.finish, h = f.raceSec / 3600;
-  return `Jon's Ultra — ${c.name}\nFinish: ${fmtClock(f.raceSec)} (${buckleFor(c, h)} buckle)\nHits taken: ${GAME.stats.hits}   Bonks: ${GAME.stats.bonks}   Night miles: ${GAME.stats.nightMiles.toFixed(1)}\nKatie and Emma were at the line.`;
+  return `Switchbacks — ${c.name}\nFinish: ${fmtClock(f.raceSec)} (${buckleFor(c, h)} buckle)\nHits taken: ${GAME.stats.hits}   Bonks: ${GAME.stats.bonks}   Night miles: ${GAME.stats.nightMiles.toFixed(1)}\nKatie and Emma were at the line.`;
 }
 
 export function resetRace() {

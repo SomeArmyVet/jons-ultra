@@ -52,9 +52,9 @@ export function drawTitle(ctx) {
   ctx.fillStyle = 'rgba(10,22,18,0.38)'; ctx.fillRect(0, 0, ENGINE.W, ENGINE.H);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(16,32,26,0.55)'; ctx.font = '800 86px ' + UI_FONT;
-  ctx.fillText("Jon's Ultra", ENGINE.W / 2 + 3, 183);                          // soft drop shadow
+  ctx.fillText("Switchbacks", ENGINE.W / 2 + 3, 183);                          // soft drop shadow
   ctx.fillStyle = '#D8E24A';
-  ctx.fillText("Jon's Ultra", ENGINE.W / 2, 180);
+  ctx.fillText("Switchbacks", ENGINE.W / 2, 180);
   ctx.fillStyle = 'rgba(234,243,228,0.85)'; ctx.font = '18px ' + UI_FONT;
   ctx.fillText('Real ultras. Real cutoffs. One runner.', ENGINE.W / 2, 244);
   button(ctx, ENGINE.W / 2 - 110, 320, 220, 54, 'Start  (Space)', 'start', true);
@@ -229,7 +229,7 @@ export function drawHUD(ctx) {
   const D = DIFFICULTY[GAME.diff], c = GAME.course;
   ctx.fillStyle = 'rgba(16, 32, 26, 0.6)'; ctx.fillRect(0, 0, ENGINE.W, 74);
   ctx.fillStyle = '#eaf3e4'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Jon's Ultra  v0.8", 18, 20);
+  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Switchbacks  v0.8", 18, 20);
 
   // Row 1: position, clock, mode
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.92)';

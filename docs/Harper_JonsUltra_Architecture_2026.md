@@ -1,4 +1,4 @@
-# Jon's Ultra — Architecture
+# Switchbacks — Architecture
 
 Status: v0.4 (Sep 5 2026 — phase 2 LIVE: split shipped, §3 lists the actual files; §4 gains `tortoise`). Read before writing any code. Goal: adding a race never requires touching the engine.
 
@@ -101,9 +101,10 @@ Pace is data (6e): each race's `targetMinutes` is the whole-race Realistic durat
 
 ## 7. Persistence keys
 
-- `jons-ultra:progress` → `{ [raceId]: { [difficulty]: { bestHours, buckle, finishes, dnfs, furthestMile } } }` (one key, one JSON blob).
-- `jons-ultra:settings` → `{ mute, reducedMotion, lastRace, lastDifficulty }`.
-- Phase 2 stretch: `jons-ultra:household` (shared scope) for the family leaderboard.
+- `switchbacks:progress` → `{ [raceId]: { [difficulty]: { bestHours, buckle, finishes, dnfs, furthestMile } } }` (one key, one JSON blob).
+- `switchbacks:settings` → `{ mute, reducedMotion, lastRace, lastDifficulty }`.
+- Phase 2 stretch: `switchbacks:household` (shared scope) for the family leaderboard.
+- Renamed from jons-ultra:* (2026-09-05): loads fall back to the old keys once and re-save under the new prefix.
 
 ## 8. How to add a race (checklist)
 

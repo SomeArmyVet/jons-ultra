@@ -1,4 +1,4 @@
-# Jon's Ultra — working rules
+# Switchbacks — working rules
 
 1. Read docs/ before any work: Design Bible, Race Bible, Architecture, Jon character sheet, Finish-Line Cast. They are the source of truth; if a request conflicts, say so and ask.
 2. Vanilla JS + Canvas 2D, ES modules, no frameworks, no build step, no external assets or libraries. Web Audio for sound.
