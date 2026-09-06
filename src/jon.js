@@ -88,6 +88,9 @@ const POSES = {
   // finish: poles raised overhead in a V (character sheet §6.10)
   finish:   { hipY: -62, lean: 0.0, headPitch: -0.35, nearHip: 0.25, nearKnee: 0.15, farHip: -0.25, farKnee: 0.15,
               nearSh: 2.7, nearEl: 0.3, farSh: 2.9, farEl: 0.2, windMul: 0.2, poleAng: 0, poleSplit: 0, beardFly: 0, poleUp: 1 },
+  // title idle: checks the GPS watch (character sheet §6.9; laugh + cap-adjust come with the polish pass)
+  watch:    { hipY: -62, lean: 0.05, headPitch: 0.3, nearHip: 0.1, nearKnee: 0.12, farHip: -0.1, farKnee: 0.12,
+              nearSh: 0.9, nearEl: 2.6, farSh: -0.6, farEl: 0.5, windMul: 0.05, poleAng: 0.9, poleSplit: 1, beardFly: 0, poleUp: 0 },
   // DNF: sits on a rock, head down
   sit:      { hipY: -30, lean: 0.3, headPitch: 0.55, nearHip: 1.35, nearKnee: 1.25, farHip: 1.15, farKnee: 1.4,
               nearSh: 0.85, nearEl: 0.9, farSh: 0.7, farEl: 1.0, windMul: 0.02, poleAng: 0.9, poleSplit: 0, beardFly: 0, poleUp: 0 }
@@ -523,6 +526,13 @@ function drawPlantedPole(ctx, pal, hand, ang, far) {
   if (far) { ctx.strokeStyle = pal.shade; ctx.stroke(); }
   ctx.strokeStyle = pal.black; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(hand.x, hand.y - 8); ctx.lineTo(hand.x, hand.y); ctx.stroke();
+}
+
+// Title-screen idle: Jon stands easy (hands on hips) and glances at the watch every few seconds.
+export function titleIdle(dt, gestures) {
+  const j = GAME.jon; if (!j) return;
+  GAME.titleT = (GAME.titleT || 0) + dt;
+  j.forcedState = gestures && (GAME.titleT % 6 > 4.6) ? 'watch' : 'aid';
 }
 
 // ===== character viewer (likeness passes; J toggles) =====

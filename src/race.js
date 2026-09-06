@@ -1,11 +1,12 @@
 // ===== MODULE: race =====
 // Aid stations, cutoffs, pacer, DNF, finish. Everything reads the course config; nothing names a race.
 import { GAME, Input, clamp, lerp } from './engine.js';
-import { SIM, DIFFICULTY, simStep } from './sim.js';
+import { SIM, DIFFICULTY, simStep, displayMile } from './sim.js';
 import { JON, makeJon } from './jon.js';
 import { AudioBed } from './audio.js';
 import { toast, fmtClock } from './ui.js';
 import { spawnCourse } from './spawner.js';
+import { Progress } from './store.js';
 
 export const RACE = {
   AID_CARD_ARCADE_S: 0.8,       // Arcade: no stop, card flashes for this long
@@ -114,15 +115,25 @@ export function takeHit() {
   }
 }
 
+const BUCKLE_ORDER = ['Finisher', 'Bronze', 'Silver', 'Gold'];
 function startDNF(occ, reason) {
   GAME.screen = 'dnf';
   GAME.dnf = { occ, reason, raceSec: GAME.raceSec };
   GAME.jon.forcedState = 'sit'; GAME.aid = null; GAME.pacer = null;
+  const p = Progress.rec(GAME.course.id, GAME.diff);
+  p.dnfs++; p.furthestMile = Math.max(p.furthestMile, Math.round(displayMile() * 10) / 10);
+  Progress.save();
 }
 function startFinish() {
   GAME.screen = 'finish';
   GAME.finish = { t: 0, raceSec: GAME.raceSec };
   GAME.jon.forcedState = 'finish'; GAME.aid = null; GAME.pacer = null;
+  const p = Progress.rec(GAME.course.id, GAME.diff), h = GAME.raceSec / 3600;
+  p.finishes++; p.furthestMile = GAME.course.distanceMiles;
+  if (p.bestHours == null || h < p.bestHours) p.bestHours = h;
+  const b = buckleFor(GAME.course, h);
+  if (p.buckle == null || BUCKLE_ORDER.indexOf(b) > BUCKLE_ORDER.indexOf(p.buckle)) p.buckle = b;
+  Progress.save();
 }
 export function buckleFor(course, hours) {
   const b = course.buckles; if (!b) return 'Finisher';

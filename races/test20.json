@@ -1,5 +1,6 @@
 {
   "id": "test20",
+  "dev": true,
   "name": "Test loop (HURT-shaped)",
   "location": "Synthetic course",
   "distanceMiles": 100,

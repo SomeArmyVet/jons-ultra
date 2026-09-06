@@ -31,9 +31,9 @@ The split was mechanical as planned: each phase-1 section became one file, verif
 8. `src/atmosphere.js` — sun/moon clocks, day/night keyframes, stars + shooting stars, rain/mist, ambient life, foot dust. Decoration only.
 9. `src/biomes/rainforest.js` + `src/biomes/index.js` — one file per kit (sky, ridges, vegetation, ground, foreground, palettes, life sets); `registerBiomes()` fills BIOMES at boot (registration at boot avoids import-cycle TDZ).
 10. `src/cast.js` — the cast: drawKatie (finish cheer + aid-station crewing modes), drawEmma, drawTortoise, drawSpectator (cast sheet §7).
-11. `src/ui.js` — intro/aid/DNF/finish cards, HUD, buttons, toasts; title + race select arrive at step 7.
+11. `src/ui.js` — title screen, race select (registry-driven cards: biome thumbnail from the kit's day palette, real facts, earned buckle + best time per difficulty), intro/aid/DNF/finish cards, HUD, buttons, toasts.
 12. `src/audio.js` — synth voices and ambient beds keyed by biome.
-13. `src/store.js` — save/load per race + difficulty (localStorage behind the phase-1 interface).
+13. `src/store.js` — Store (raw), Settings (merged: mute, lastRace, lastDifficulty), Progress (per race + difficulty: bestHours, buckle, finishes, dnfs, furthestMile); localStorage behind the phase-1 interface.
 14. `races/*.json` — the race registry: one config file per race (§4), fetched and registered at boot.
 
 Allowed globals: `GAME` (state), `RACES` (registry), `BIOMES` (kit registry). Nothing else — everything further crosses files as ES module imports; the three globals are also mirrored on `window` for console debugging.
@@ -45,6 +45,7 @@ Every race is one object. Adding a race = adding one object and, if needed, one 
 ```js
 {
   id: "hurt100",                       // slug, used for storage keys and seeds
+  dev: true,                           // optional: hidden from race select unless the URL contains ?dev (test20)
   name: "HURT 100",
   location: "Honolulu, Oahu, HI",
   month: "January",

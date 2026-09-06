@@ -2,13 +2,13 @@
 // Loop, timing, input, camera, scene stack — and the three allowed globals (Architecture §3):
 // GAME (state), RACES (registry), BIOMES (kit registry). Everything else crosses files as ES imports.
 import { render, particlesStep, finishTrailMile } from './render.js';
-import { JON, jonStep, viewerStep, viewerToggle } from './jon.js';
+import { JON, jonStep, viewerStep, viewerToggle, titleIdle } from './jon.js';
 import { SIM, simStep } from './sim.js';
 import { aidStep, resetRace } from './race.js';
 import { hazardsStep } from './hazards.js';
 import { atmoStep, atmoRng } from './atmosphere.js';
 import { AudioBed } from './audio.js';
-import { Store } from './store.js';
+import { Settings, Progress } from './store.js';
 import { UI, uiClick, uiAction, toast } from './ui.js';
 import { registerBiomes } from './biomes/index.js';
 
@@ -34,7 +34,7 @@ export const GAME = {
   energy: 100, hydration: 100, bonk: false, cramp: false, crampTimer: 4,
   collected: new Set(), floaters: [], toasts: [],
   shake: 0,
-  screen: 'intro',          // intro | race | dnf | finish
+  screen: 'title',          // title | select | intro | race | dnf | finish
   stations: [], nextIdx: 0, aid: null, dnf: null, finish: null, pacer: null, bonusItem: null, forceCutoffMiss: false,
   stats: { hits: 0, bonks: 0, nightMiles: 0 },
   rain: 0, mistAmount: 0, life: [], shooting: null,
@@ -103,7 +103,7 @@ export const Input = {
       else if (e.code === 'KeyF' && !e.repeat) GAME.fast = !GAME.fast;
       else if (e.code === 'Comma') this.skipMiles -= 1;
       else if (e.code === 'Period') this.skipMiles += 1;
-      else if (e.code === 'KeyT' && !e.repeat) GAME.diff = GAME.diff === 'realistic' ? 'arcade' : 'realistic';
+      else if (e.code === 'KeyT' && !e.repeat) { GAME.diff = GAME.diff === 'realistic' ? 'arcade' : 'realistic'; Settings.save({ lastDifficulty: GAME.diff }); }
       else if (e.code === 'KeyN') GAME.raceSec += e.shiftKey ? 6 * 3600 : 3600;
       else if (e.code === 'KeyM' && !e.repeat) { if (e.shiftKey) GAME.course.moon = GAME.course.moon === 'full' ? 'none' : 'full'; else AudioBed.setMuted(!AudioBed.muted); }
       else if (e.code === 'KeyX' && !e.repeat) { if (GAME.night > 0.6 && !GAME.shooting) GAME.shooting = { x: 300 + atmoRng() * 600, y: 50 + atmoRng() * 150, vx: -650, vy: 220, age: 0 }; else toast('Shooting stars need full night'); }
@@ -176,6 +176,7 @@ function step(dt) {
   if (GAME.screen === 'intro') return;
   GAME.t += dt;
   if (GAME.screen === 'race') { simStep(dt); aidStep(dt); if (GAME.screen === 'race') hazardsStep(dt); }
+  else if (GAME.screen === 'title' || GAME.screen === 'select') { GAME.speed = 0; GAME.animSpeed = 0; titleIdle(dt, GAME.screen === 'title'); }
   else { GAME.speed = lerpTo(GAME.speed, 0, dt, 6); GAME.animSpeed = 0; if (GAME.finish) GAME.finish.t += dt; GAME.shake = Math.max(0, GAME.shake - 18 * dt); }
   for (let k = GAME.toasts.length - 1; k >= 0; k--) { GAME.toasts[k].age += dt; if (GAME.toasts[k].age > 1.8) GAME.toasts.splice(k, 1); }
   jonStep(GAME.jon, dt);
@@ -199,10 +200,19 @@ function frame(now) {
   if (Input.uiKey) {
     const k = Input.uiKey; Input.uiKey = null;
     if (k === 'gotoFinish') { if (GAME.screen === 'race') skipTo(finishTrailMile() - 0.3); }
-    else if (k === 'primary') { if (GAME.screen === 'intro') uiAction('go'); else if (GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('restart'); }
-    else if (k === 'select') { if (GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('select'); }
+    else if (k === 'primary') {
+      if (GAME.screen === 'title') uiAction('start');
+      else if (GAME.screen === 'select') uiAction('race:' + GAME.course.id);
+      else if (GAME.screen === 'intro') uiAction('go');
+      else if (GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('restart');
+    }
+    else if (k === 'select') {
+      if (GAME.screen === 'select') uiAction('title');
+      else if (GAME.screen === 'intro' || GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('select');
+    }
   }
   if (GAME.screen === 'intro' && Input.jumpBuffered(now)) { Input.consumeJump(); uiAction('go'); }
+  if (GAME.screen === 'title' && Input.jumpBuffered(now)) { Input.consumeJump(); uiAction('start'); }
 
   if (!GAME.paused) {
     accum += dt;
@@ -229,12 +239,15 @@ async function boot() {
     const course = await (await fetch(`./races/${id}.json`)).json();
     RACES[course.id] = course;
   }
-  // ?race=test20 keeps the synthetic loop reachable for regression tests until race select lands at step 7.
+  await Settings.load(); await Progress.load();
+  if (Settings.data.mute) AudioBed.muted = true;
+  if (Settings.data.lastDifficulty === 'arcade' || Settings.data.lastDifficulty === 'realistic') GAME.diff = Settings.data.lastDifficulty;
+  // ?race=<id> jumps straight to that race's intro (dev + regression); otherwise the title screen,
+  // with the last-run race idling in the world behind it.
   const raceId = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('race') : null;
-  GAME.course = RACES[raceId] || RACES.hurt100;
+  GAME.course = RACES[raceId] || RACES[Settings.data.lastRace] || RACES.hurt100;
   resetRace();
-  GAME.screen = 'intro';
-  Store.get('jons-ultra:settings').then(sv => { if (sv && sv.mute) AudioBed.muted = true; });
+  GAME.screen = raceId ? 'intro' : 'title';
   lastFrame = performance.now(); GAME.fps.since = lastFrame;
   requestAnimationFrame(frame);
 }

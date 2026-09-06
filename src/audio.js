@@ -4,7 +4,7 @@
 // steady: insects chirp in bursts with 5–20 s silences, wind comes in gusts, rain only during squalls.
 // Footsteps −50% and pitch-varied per step. Starts on the first key or tap (browser gesture rule).
 import { GAME, rng } from './engine.js';
-import { Store } from './store.js';
+import { Settings } from './store.js';
 
 // Dev-tweakable from the console (window.AUDIO): master = overall, ambient = bed bus relative level.
 export const AUDIO = { master: 0.8, ambient: 0.4 };
@@ -131,5 +131,5 @@ export const AudioBed = {
     for (const fr of [562, 845]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = fr; o.connect(f); o.start(t0); o.stop(t0 + 0.9); }
     f.connect(g); g.connect(this.master);
   },
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : AUDIO.master, this.ctx.currentTime, 0.05); Store.set('jons-ultra:settings', { mute: m }); }
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : AUDIO.master, this.ctx.currentTime, 0.05); Settings.save({ mute: m }); }
 };
