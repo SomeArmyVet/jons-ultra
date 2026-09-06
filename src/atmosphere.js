@@ -97,7 +97,7 @@ export function atmoStep(dt, tReal) {
 export function drawRain(ctx, pal, v) {
   const r = GAME.rain; if (r < 0.02) return;
   ctx.strokeStyle = pal.rain; ctx.globalAlpha = 0.35 * r; ctx.lineWidth = 1.2;
-  const n = Math.floor(ATMO.RAIN_DROPS * r), tt = GAME.t;
+  const n = Math.floor(ATMO.RAIN_DROPS * r * (GAME.reducedMotion ? 0.5 : 1)), tt = GAME.t;
   ctx.beginPath();
   for (let i = 0; i < n; i++) {
     const h = hash(i * 131 + 7), h2 = hash(i * 173 + 3);

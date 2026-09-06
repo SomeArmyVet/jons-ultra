@@ -40,6 +40,7 @@ export const GAME = {
   rain: 0, mistAmount: 0, life: [], shooting: null,
   spawn: null, critters: [], obIdx: 0, anIdx: 0, segHits: 0, slowT: 0, slowK: 1, attempt: 0, paceMul: 1,
   loops: 1, mileRate: 1, lastKatieAt: null,
+  reducedMotion: false, hazardMarks: true,
   marchers: { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, crossingDone: false, dark: 0, wasNight: false },
   jon: null,
   particles: [],
@@ -242,6 +243,8 @@ async function boot() {
   await Settings.load(); await Progress.load();
   if (Settings.data.mute) AudioBed.muted = true;
   if (Settings.data.lastDifficulty === 'arcade' || Settings.data.lastDifficulty === 'realistic') GAME.diff = Settings.data.lastDifficulty;
+  GAME.reducedMotion = !!Settings.data.reducedMotion;
+  GAME.hazardMarks = Settings.data.hazardMarks !== false;
   // ?race=<id> jumps straight to that race's intro (dev + regression); otherwise the title screen,
   // with the last-run race idling in the world behind it.
   const raceId = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('race') : null;

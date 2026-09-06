@@ -26,7 +26,7 @@ The split was mechanical as planned: each phase-1 section became one file, verif
 3. `src/jon.js` — procedural character: hair sim (verlet), beard/tattoo drawing, poses/gaits, hitbox; includes the character viewer (J key), keeping poses and hair internals module-private.
 4. `src/sim.js` — meters, race clock, course sampling (elevation/grade/surface), DIFFICULTY and SURFACES tables, palette blending, placeholder trail pickups.
 5. `src/race.js` — station list, cutoffs, aid stops, pacer, drop-bag bonuses, hit pipeline, DNF/finish, race reset.
-6. `src/spawner.js` — reads the race config's hazard tables and surfaces; emits obstacles and animals with seeded RNG (seed = race id + attempt). Fixed-mile obstacles (stream crossings) repeat at their real miles every lap; weighted ones roll per slot honouring surface filters, with minimum spacing and aid-station clear zones.
+6. `src/spawner.js` — reads the race config's hazard tables and surfaces; emits obstacles and animals with seeded RNG (seed = race id + attempt). Fixed-mile obstacles (stream crossings) repeat at their real miles every lap; weighted ones roll per slot honouring surface filters, with time-based minimum spacing, aid-station clear zones, and a phase-aware biter quota (an explicit density ramp was evaluated and rejected at step 8 — see Design Bible §12).
 7. `src/hazards.js` — obstacle resolution (jump the root web, duck the limb, slide the slab, hop or wade the streams, jump the mud pit) and animal behaviours (pig telegraph-and-bolt, wallaby coil-and-hop, mongoose dart, centipede bite, chicken scatter, rat streak, night eye-shine) with drawing functions; the Huakaʻi Pō lore hazard; owns the segment hit counter (hitsPerFall → stumble-fall).
 8. `src/atmosphere.js` — sun/moon clocks, day/night keyframes, stars + shooting stars, rain/mist, ambient life, foot dust. Decoration only.
 9. `src/biomes/rainforest.js` + `src/biomes/index.js` — one file per kit (sky, ridges, vegetation, ground, foreground, palettes, life sets); `registerBiomes()` fills BIOMES at boot (registration at boot avoids import-cycle TDZ).
@@ -93,7 +93,7 @@ Validation: on load, `races` runs a schema check and throws with the race id and
 
 ## 5. Difficulty as data
 
-`DIFFICULTY.realistic` and `DIFFICULTY.arcade` are objects of multipliers (scroll speed, drain rates, hit tolerance, cutoff enforcement, aid stop seconds, night ambient). The sim reads the active one; no `if (arcade)` branches anywhere else.
+`DIFFICULTY.realistic` and `DIFFICULTY.arcade` are objects of multipliers and flags (scroll speed, drain rates, hitsPerFall, `enforceDNF` — cutoffs and medical pulls warn instead of DNFing when false, aid stop seconds, night ambient). The sim and race modules read the active one; no `if (arcade)` branches anywhere else.
 
 ## 6. Time scale
 

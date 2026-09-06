@@ -214,6 +214,9 @@ export function drawHazards(ctx, view, pal, t) {
     else if (o.type === 'slickRock') drawSlickRock(ctx, x, gy, pal);
     else if (o.type === 'mudPit') drawMudPit(ctx, x, gy, t);
     else if (o.type === 'streamCrossing') drawStream(ctx, x, gy, t);
+    // accessibility (Design Bible §8): shape-coded action cue — ▲ jump over, ▼ get low. Shape and
+    // luminance carry the meaning, never hue. Toggleable from the title screen.
+    if (GAME.hazardMarks && o.mile > GAME.mile) drawActionCue(ctx, o.type, x, gy);
   }
   for (const c of GAME.critters) {
     const sx = critterScreenX(c);
@@ -283,6 +286,18 @@ export function drawMarchersDark(ctx, W, H) {
   ctx.fillRect(0, 0, W, H);
 }
 
+const CUE_UP = new Set(['rootWeb', 'mudPit', 'streamCrossing']);   // jump these
+const CUE_DOWN = new Set(['banyanLimb', 'slickRock']);             // duck/slide these
+function drawActionCue(ctx, type, x, gy) {
+  const up = CUE_UP.has(type), down = CUE_DOWN.has(type);
+  if (!up && !down) return;
+  const y = gy - 132;
+  ctx.fillStyle = 'rgba(255,244,200,0.5)';
+  ctx.beginPath();
+  if (up) { ctx.moveTo(x - 7, y + 5); ctx.lineTo(x, y - 5); ctx.lineTo(x + 7, y + 5); }
+  else { ctx.moveTo(x - 7, y - 5); ctx.lineTo(x, y + 5); ctx.lineTo(x + 7, y - 5); }
+  ctx.closePath(); ctx.fill();
+}
 function drawRootWeb(ctx, x, gy, pal, seedMile) {
   const h = (seedMile * 37) % 1;
   ctx.strokeStyle = pal.root; ctx.lineCap = 'round';

@@ -28,7 +28,7 @@ export function render(ctx, tReal) {
   view.mistAmount = GAME.mistAmount;
 
   ctx.save();
-  if (GAME.shake > 0) ctx.translate((shakeRng() - 0.5) * 2 * GAME.shake, (shakeRng() - 0.5) * 2 * GAME.shake);
+  if (GAME.shake > 0 && !GAME.reducedMotion) ctx.translate((shakeRng() - 0.5) * 2 * GAME.shake, (shakeRng() - 0.5) * 2 * GAME.shake);
   const zk = finishZoom();
   if (zk > 0) {                                                       // camera eases toward Katie and Emma
     const ke = katieEmmaScreen(view), fx = (ke.katie.x + ke.emma.x) / 2, fy = ke.katie.y - 70;
@@ -366,6 +366,7 @@ function drawGroundShadow(ctx, x, groundY, heightPx, slope, scale) {
 
 const particleRng = rng(0xd0d0);
 export function spawnDust(x, y, n, color, sizeMul) {
+  if (GAME.reducedMotion) n = Math.ceil(n / 2);          // accessibility: fewer particles
   for (let i = 0; i < n; i++) {
     const a = particleRng();
     GAME.particles.push({

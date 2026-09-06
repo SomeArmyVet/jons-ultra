@@ -29,6 +29,8 @@ export function uiAction(id) {
   else if (id === 'title') GAME.screen = 'title';
   else if (id === 'select') GAME.screen = 'select';
   else if (id === 'toggleDiff') { GAME.diff = GAME.diff === 'realistic' ? 'arcade' : 'realistic'; Settings.save({ lastDifficulty: GAME.diff }); }
+  else if (id === 'toggleMotion') { GAME.reducedMotion = !GAME.reducedMotion; Settings.save({ reducedMotion: GAME.reducedMotion }); }
+  else if (id === 'toggleMarks') { GAME.hazardMarks = !GAME.hazardMarks; Settings.save({ hazardMarks: GAME.hazardMarks }); }
   else if (id.startsWith('race:')) {
     const rc = RACES[id.slice(5)];
     if (rc) { GAME.course = rc; Settings.save({ lastRace: rc.id, lastDifficulty: GAME.diff }); resetRace(); GAME.screen = 'intro'; }
@@ -57,11 +59,13 @@ export function drawTitle(ctx) {
   ctx.fillText("Switchbacks", ENGINE.W / 2, 180);
   ctx.fillStyle = 'rgba(234,243,228,0.85)'; ctx.font = '18px ' + UI_FONT;
   ctx.fillText('Real ultras. Real cutoffs. One runner.', ENGINE.W / 2, 244);
-  button(ctx, ENGINE.W / 2 - 110, 320, 220, 54, 'Start  (Space)', 'start', true);
-  button(ctx, ENGINE.W / 2 - 150, 396, 300, 44, `Mode: ${DIFFICULTY[GAME.diff].label}  (T)`, 'toggleDiff', false);
-  ctx.fillStyle = 'rgba(234,243,228,0.55)'; ctx.font = '13px ' + UI_FONT;
-  ctx.fillText('M: mute     J: character viewer', ENGINE.W / 2, 470);
-  ctx.textAlign = 'right'; ctx.fillText('v0.8', ENGINE.W - 16, ENGINE.H - 16);
+  button(ctx, ENGINE.W / 2 - 110, 306, 220, 54, 'Start  (Space)', 'start', true);
+  button(ctx, ENGINE.W / 2 - 150, 378, 300, 42, `Mode: ${DIFFICULTY[GAME.diff].label}  (T)`, 'toggleDiff', false);
+  button(ctx, ENGINE.W / 2 - 150, 430, 300, 38, `Reduced motion: ${GAME.reducedMotion ? 'On' : 'Off'}`, 'toggleMotion', false);
+  button(ctx, ENGINE.W / 2 - 150, 478, 300, 38, `Hazard cues: ${GAME.hazardMarks ? 'On' : 'Off'}`, 'toggleMarks', false);
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(234,243,228,0.55)'; ctx.font = '13px ' + UI_FONT;
+  ctx.fillText('M: mute     J: character viewer', ENGINE.W / 2, 546);
+  ctx.textAlign = 'right'; ctx.fillText('v0.9', ENGINE.W - 16, ENGINE.H - 16);
 }
 
 // --- race select (Design Bible §10.2): registry-driven cards — name, location, distance, gain, biome
@@ -229,7 +233,7 @@ export function drawHUD(ctx) {
   const D = DIFFICULTY[GAME.diff], c = GAME.course;
   ctx.fillStyle = 'rgba(16, 32, 26, 0.6)'; ctx.fillRect(0, 0, ENGINE.W, 74);
   ctx.fillStyle = '#eaf3e4'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Switchbacks  v0.8", 18, 20);
+  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Switchbacks  v0.9", 18, 20);
 
   // Row 1: position, clock, mode
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.92)';

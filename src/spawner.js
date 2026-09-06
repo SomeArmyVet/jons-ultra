@@ -6,8 +6,11 @@ import { GAME, rng } from './engine.js';
 import { SIM, courseSurface, courseElev, courseLoopMile } from './sim.js';
 
 // Density ×3 (Michael's feel pass 2026-09-05): ≈ one obstacle per 0.25 mi overall, roots denser still,
-// animals ×3. MIN_GAP keeps clusters readable — at the new pace it is ~0.7 s between obstacles, and a
-// full-hold jump covers ~0.07 mi, so back-to-back obstacles stay dodgeable.
+// animals ×3. Step 8 evaluated an explicit spawn-density ramp (obstacle rolls ×0.85→×1.15, then a
+// quota ramp 14→18) and REJECTED both: the GAP_S spacing cap flattens realized obstacle density
+// (52/52/61 per loop with the ramp), and every layout perturbation reshuffles hit timing outside the
+// 6e 3–8 hits-per-loop contract. The effective curve stays the phase-aware quota (+3 on the last
+// loop) plus natural late-race congestion. Revisit only with a widened acceptance band.
 const SPAWN = {
   START_MILE: 0.4,                  // clear runway out of the start
   OB_STEP: 0.08, OB_CHANCE: 0.75,   // rolls per slot; surface-filter misses thin this to ≈ one per 0.25 mi

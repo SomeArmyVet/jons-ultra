@@ -52,15 +52,19 @@ function raceHours() { return GAME.raceSec / 3600; }
 // Called by the sim when Jon's mile crosses a station.
 export function arriveAt(occ) {
   const D = DIFFICULTY[GAME.diff];
+  // Design Bible §6: Realistic enforces the race; Arcade warns and rolls on (difficulty is data).
   if (occ.isFinish) {
     // Reaching the line after the course closes is a DNF, not a finish (course closure is real).
-    if (occ.cutoffH != null && raceHours() > occ.cutoffH) { startDNF(occ, 'cutoff'); return; }
+    if (D.enforceDNF && occ.cutoffH != null && raceHours() > occ.cutoffH) { startDNF(occ, 'cutoff'); return; }
     startFinish(); return;
   }
   const late = (occ.cutoffH != null && raceHours() > occ.cutoffH) || GAME.forceCutoffMiss;
   GAME.forceCutoffMiss = false;
-  if (late) { startDNF(occ, 'cutoff'); return; }
-  if (GAME.bonk && GAME.cramp) { startDNF(occ, 'pulled'); return; }
+  if (late) {
+    if (D.enforceDNF) { startDNF(occ, 'cutoff'); return; }
+    toast(`Past the real cutoff at ${occ.station.name.split(' (')[0]} — Arcade rolls on`);
+  }
+  if (D.enforceDNF && GAME.bonk && GAME.cramp) { startDNF(occ, 'pulled'); return; }
 
   GAME.segHits = 0;                                            // hit tolerance resets at every aid station
   // Pacer leaves at the station after joining; joins at the first eligible station past pacerFromMile.
