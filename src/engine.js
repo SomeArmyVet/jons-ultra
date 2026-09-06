@@ -1,7 +1,7 @@
 // ===== MODULE: engine =====
 // Loop, timing, input, camera, scene stack — and the three allowed globals (Architecture §3):
 // GAME (state), RACES (registry), BIOMES (kit registry). Everything else crosses files as ES imports.
-import { render, particlesStep, finishAbsMile } from './render.js';
+import { render, particlesStep, finishTrailMile } from './render.js';
 import { JON, jonStep, viewerStep, viewerToggle } from './jon.js';
 import { SIM, simStep } from './sim.js';
 import { aidStep, resetRace } from './race.js';
@@ -39,7 +39,8 @@ export const GAME = {
   stats: { hits: 0, bonks: 0, nightMiles: 0 },
   rain: 0, mistAmount: 0, life: [], shooting: null,
   spawn: null, critters: [], obIdx: 0, anIdx: 0, segHits: 0, slowT: 0, slowK: 1, attempt: 0, paceMul: 1,
-  marchers: { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, dark: 0, wasNight: false },
+  loops: 1, mileRate: 1, lastKatieAt: null,
+  marchers: { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, crossingDone: false, dark: 0, wasNight: false },
   jon: null,
   particles: [],
   fps: { frames: 0, since: 0, value: 0 },
@@ -197,7 +198,7 @@ function frame(now) {
   if (Input.skipMiles) { skipTo(GAME.mile + Input.skipMiles); Input.skipMiles = 0; }
   if (Input.uiKey) {
     const k = Input.uiKey; Input.uiKey = null;
-    if (k === 'gotoFinish') { if (GAME.screen === 'race') skipTo(finishAbsMile() - 0.3); }
+    if (k === 'gotoFinish') { if (GAME.screen === 'race') skipTo(finishTrailMile() - 0.3); }
     else if (k === 'primary') { if (GAME.screen === 'intro') uiAction('go'); else if (GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('restart'); }
     else if (k === 'select') { if (GAME.screen === 'dnf' || GAME.screen === 'finish') uiAction('select'); }
   }

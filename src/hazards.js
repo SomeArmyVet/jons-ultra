@@ -15,12 +15,16 @@ import { AudioBed } from './audio.js';
 const HZ = {
   ROOT_CLEAR: 26,        // px of air Jon needs over a root web
   MUD_SLOW: 0.55, MUD_S: 1.0,
-  WADE_SLOW: 0.6, WADE_S: 1.4, WADE_HYD: 4, WADE_EN: 3,
-  TRIP_EN: 4,
-  PIG_SPEED: 260, MONGOOSE_SPEED: 420, RAT_SPEED: 380,
+  WADE_SLOW: 0.6, WADE_S: 1.4, WADE_HYD: 8, WADE_EN: 3,   // wading is the hydration play at HURT (6e tuning)
+  TRIP_EN: 0,            // 6e: the stumble IS the obstacle cost — meters are drained by miles and bites
+  // pig rework (6e): waits trailside, 0.6 s telegraph (grunt + hoof dust + head lowers), then bolts
+  // across in 0.5 s. Jump clears it; duck does not (it is half Jon's height).
+  PIG_NOTICE: 760, PIG_TG_S: 0.6, PIG_GO: 300, PIG_BOLT: 620, PIG_BOLT_S: 0.5, PIG_CLEAR: 62,
+  MONGOOSE_SPEED: 420, RAT_SPEED: 380,
   CHICKEN_NOTICE: 260, CHICKEN_FLEE: 180, CHICKEN_FLEE_S: 1.2,
-  WALLABY_NOTICE: 360, WALLABY_HOP_S: 0.9, WALLABY_HOP_H: 112, WALLABY_HOP_X: 170, WALLABY_BODY: 15,
-  DUCK_TOP: 76,          // Jon's height while ducking, px — clears under a wallaby at the top of its arc
+  WALLABY_NOTICE: 320, WALLABY_COIL_S: 0.45, WALLABY_HOP_S: 0.75, WALLABY_HOP_H: 112, WALLABY_HOP_X: 170, WALLABY_BODY: 15,
+  DUCK_TOP: 76,          // Jon's height while sliding, px — clears under a wallaby at the top of its arc
+  CROUCH_TOP: 95,        // crouch-walk is a little taller but still clears the arc
   STAND_TOP: 140,
   WAKE_MI: 0.2,          // animals activate this far ahead of Jon
   DRAW_AHEAD_MI: 0.3,
@@ -37,6 +41,9 @@ function timeOk(times) {
   }
   return false;
 }
+// Duck and crouch both count as "low" for clearance (limb, slick rock, wallaby, marchers); only the
+// slide is speed-free — the crouch-walk pays with CROUCH_SPEED.
+function isLow(j) { return j.state === 'duck' || j.state === 'crouch'; }
 function trip(j, energyCost) {
   triggerStumble(j);
   if (energyCost) GAME.energy = clamp(GAME.energy - energyCost, 0, 100);
@@ -47,15 +54,15 @@ function trip(j, energyCost) {
 // far past an obstacle skips its effect instead of resolving a wall of them at once.
 function resolveObstacle(o, j) {
   if (GAME.mile - o.mile > 0.05) return;
-  const airborne = !j.grounded, y = j.y, duck = j.state === 'duck';
+  const airborne = !j.grounded, y = j.y;
   if (o.type === 'rootWeb') {
     if (airborne && y > HZ.ROOT_CLEAR) return;
     trip(j, HZ.TRIP_EN);
   } else if (o.type === 'banyanLimb') {
-    if (duck) return;
+    if (isLow(j)) return;
     trip(j, HZ.TRIP_EN + 1);
   } else if (o.type === 'slickRock') {
-    if (duck || airborne) return;                              // slide across (or clear it)
+    if (isLow(j) || airborne) return;                          // slide across (or clear it)
     trip(j, 0);
   } else if (o.type === 'mudPit') {
     if (airborne && y > 10) return;
@@ -83,8 +90,20 @@ function critterStep(c, dt, j) {
   c.t += dt; c.phase += dt * 10;
   const sx = critterScreenX(c), dx = sx - JON.X;
   if (c.type === 'pig') {
-    c.x -= HZ.PIG_SPEED * dt;                                  // charges down the trail at Jon
-    if (!c.hitDone && Math.abs(dx) < 34 && j.y < 34) { c.hitDone = true; takeHit(); }
+    // idle trailside -> telegraph (>= PIG_TG_S, always) -> bolt across -> gone
+    if (c.state === 'idle' && dx < HZ.PIG_NOTICE) { c.state = 'telegraph'; c.tgT = 0; AudioBed.grunt(); }
+    else if (c.state === 'telegraph') {
+      c.tgT += dt;
+      if (c.tgT > 0.12 && Math.floor(c.tgT / 0.16) !== Math.floor((c.tgT - dt) / 0.16))
+        spawnDust(critterScreenX(c) - 20, RENDER.GROUND_Y + GAME.camY, 2);   // pawing hooves
+      const goPx = 180 + (c.seed % 1000) / 1000 * 200;                    // seeded: some bolt very late
+      if (c.tgT >= HZ.PIG_TG_S && dx < goPx) { c.state = 'bolt'; c.boltT = 0; }
+    } else if (c.state === 'bolt') {
+      c.boltT += dt;
+      c.x -= HZ.PIG_BOLT * dt;
+      if (!c.hitDone && Math.abs(critterScreenX(c) - JON.X) < 40 && j.y < HZ.PIG_CLEAR) { c.hitDone = true; takeHit(); }
+      if (c.boltT >= HZ.PIG_BOLT_S) c.gone = true;              // across and into the green
+    }
   } else if (c.type === 'mongoose') {
     c.x -= HZ.MONGOOSE_SPEED * dt;                             // darts under Jon's feet
     if (!c.hitDone && Math.abs(dx) < 20 && j.grounded) { c.hitDone = true; triggerStumble(j); }
@@ -97,14 +116,19 @@ function critterStep(c, dt, j) {
       c.fleeT = (c.fleeT || 0) + dt; if (c.fleeT > HZ.CHICKEN_FLEE_S) c.gone = true;
     }
   } else if (c.type === 'wallaby') {
-    // waits beside the trail, then hops across in one high arc (Kalihi Valley colony, Race Bible §1)
-    if (c.state === 'idle' && dx < HZ.WALLABY_NOTICE) { c.state = 'hop'; c.hopT = 0; c.x0 = c.x; }
+    // waits beside the trail, coils 0.45 s (visible squat — every hazard telegraphs), then hops across
+    // in one high arc (Kalihi Valley colony, Race Bible §1)
+    if (c.state === 'idle' && dx < HZ.WALLABY_NOTICE) { c.state = 'coil'; c.coilT = 0; }
+    else if (c.state === 'coil') {
+      c.coilT += dt;
+      if (c.coilT >= HZ.WALLABY_COIL_S) { c.state = 'hop'; c.hopT = 0; c.x0 = c.x; }
+    }
     if (c.state === 'hop') {
       c.hopT += dt / HZ.WALLABY_HOP_S;
       c.x = c.x0 - c.hopT * HZ.WALLABY_HOP_X;
       if (c.hopT >= 1) { c.state = 'away'; c.awayT = 0; }
       const wy = Math.sin(clamp(c.hopT, 0, 1) * Math.PI) * HZ.WALLABY_HOP_H;       // height of the arc
-      const jonTop = j.state === 'duck' ? HZ.DUCK_TOP : HZ.STAND_TOP;
+      const jonTop = j.state === 'duck' ? HZ.DUCK_TOP : j.state === 'crouch' ? HZ.CROUCH_TOP : HZ.STAND_TOP;
       if (!c.hitDone && Math.abs(critterScreenX(c) - JON.X) < 26 &&
           wy - HZ.WALLABY_BODY < j.y + jonTop && wy + HZ.WALLABY_BODY > j.y) {
         c.hitDone = true; takeHit();
@@ -126,27 +150,23 @@ function marchersStep(dt) {
   const M = GAME.marchers, lore = GAME.course.lore || {};
   if (!lore.nightMarchers) return;
   const nightNow = GAME.night > 0.9;
-  if (nightNow && !M.wasNight) {                                // a new night falls: roll it
-    M.nightIdx++;
-    const base = GAME.attempt * 131 + M.nightIdx;
-    M.bg = hash(base * 977 + 5) < (GAME.course.moon === 'full' ? 0.5 : 0.34);
-    M.onTrailMile = null; M.crossing = null;
-    if (M.bg && hash(base * 449 + 11) < 0.5)
-      M.onTrailMile = GAME.mile + 2 + hash(base * 613 + 3) * 15;
-  }
+  if (nightNow && !M.wasNight) { M.nightIdx++; M.bg = true; }  // torches walk the ridge every night (6d: guaranteed)
   M.wasNight = nightNow;
   if (GAME.night < 0.6) M.crossing = null;                     // dawn dissolves the procession
   if (M.dark > 0) M.dark = Math.max(0, M.dark - dt / 1.2);
+  // exactly one on-trail crossing per race (6d), scheduled a seeded distance ahead once night is full
+  if (!M.crossingDone && !M.crossing && M.onTrailMile == null && GAME.night > 0.7)
+    M.onTrailMile = GAME.mile + 1 + hash(GAME.attempt * 131 + 7) * 2.5;
   if (M.onTrailMile != null && !M.crossing && GAME.night > 0.6 && GAME.mile > M.onTrailMile - 0.08) {
     M.crossing = { mile: M.onTrailMile, t: 0, hitDone: false };
-    M.onTrailMile = null;
+    M.onTrailMile = null; M.crossingDone = true;
   }
   const c = M.crossing;
   if (c) {
     c.t += dt;
     const inZone = Math.abs(c.mile - GAME.mile) * SIM.PX_PER_MILE < HZ.MARCH_ZONE;
     if (inZone && c.t < HZ.MARCH_DUR) {
-      if (GAME.jon.state === 'duck') { GAME.slowT = Math.max(GAME.slowT, 0.2); GAME.slowK = 0.02; }   // stop, stay down
+      if (isLow(GAME.jon)) { GAME.slowT = Math.max(GAME.slowT, 0.2); GAME.slowK = 0.02; }   // stop, stay down
       else if (!c.hitDone) { c.hitDone = true; takeHit(); M.dark = 1; }
     }
     if (c.t > HZ.MARCH_DUR + 2) M.crossing = null;
@@ -205,6 +225,13 @@ export function drawHazards(ctx, view, pal, t) {
     else if (c.type === 'chicken') drawChicken(ctx, sx, gy, c);
     else if (c.type === 'wallaby') drawWallaby(ctx, sx, gy, c);
     else if (c.type === 'rat') drawRat(ctx, sx, gy, c);
+    // night eye-shine: animal eyes catch the headlamp well beyond the cone — real, and it keeps
+    // night encounters fair at speed (6e readability)
+    if (GAME.night > 0.4 && c.type !== 'chicken') {
+      const ey = c.type === 'pig' ? gy - 34 : c.type === 'wallaby' ? gy - 25 - (c.state === 'hop' ? Math.sin(clamp(c.hopT, 0, 1) * Math.PI) * HZ.WALLABY_HOP_H : 0) : gy - 7;
+      ctx.fillStyle = `rgba(255,220,140,${0.7 * GAME.night})`;
+      ctx.beginPath(); ctx.arc(sx - (c.type === 'pig' ? 45 : 16), ey, 1.4, 0, Math.PI * 2); ctx.fill();
+    }
   }
   drawMarchersCrossing(ctx, view, t);
 }
@@ -310,18 +337,37 @@ function drawStream(ctx, x, gy, t) {
   }
 }
 
+// Wild pig (6e look): ~0.5 x Jon tall, longer than tall; low heavy body, bristly mane ridge, snout,
+// small tusks. ONE ink tone (dark grey-brown) plus the same shade/highlight discipline as Jon.
 function drawPig(ctx, x, gy, c) {
+  const tg = c.state === 'telegraph', bolt = c.state === 'bolt';
+  const run = bolt ? Math.sin(c.phase * 3) : 0;
+  const headDrop = tg ? Math.min(1, c.tgT / 0.3) * 10 : bolt ? 6 : 0;     // the telegraph: head lowers
+  const INK = '#453a30', SHADE = 'rgba(20,14,8,0.28)', PALE = '#e8e2d0';
   ctx.save(); ctx.translate(x, gy);
-  ctx.fillStyle = '#3d3128';
-  for (const [lx, ph] of [[-14, 0], [-4, Math.PI], [8, 0.6], [16, Math.PI + 0.6]])
-    ctx.fillRect(lx + Math.sin(c.phase * 2 + ph) * 3, -10, 4.5, 10);      // trotting legs
-  ctx.beginPath(); ctx.ellipse(0, -18, 24, 12, 0, 0, Math.PI * 2); ctx.fill();          // body
-  ctx.beginPath(); ctx.ellipse(-22, -16, 9, 7.5, 0.15, 0, Math.PI * 2); ctx.fill();     // head (facing Jon)
-  ctx.fillStyle = '#57493c'; ctx.beginPath(); ctx.ellipse(2, -24, 14, 5, 0, 0, Math.PI * 2); ctx.fill();   // bristly back
-  ctx.fillStyle = '#2b221b'; ctx.beginPath(); ctx.ellipse(-30, -14, 4, 3, 0, 0, Math.PI * 2); ctx.fill();  // snout
-  ctx.strokeStyle = '#e8e2d0'; ctx.lineWidth = 2; ctx.lineCap = 'round';                                   // tusk
-  ctx.beginPath(); ctx.moveTo(-28, -12); ctx.quadraticCurveTo(-31, -15, -29, -18); ctx.stroke();
-  ctx.fillStyle = '#e8e2d0'; ctx.beginPath(); ctx.arc(-24, -19, 1.1, 0, Math.PI * 2); ctx.fill();          // eye
+  ctx.fillStyle = INK;
+  // legs: stumpy and thick; trot only while bolting
+  for (const [lx, ph] of [[-30, 0], [-16, Math.PI], [14, 0.6], [28, Math.PI + 0.6]])
+    ctx.fillRect(lx + run * Math.sin(c.phase * 3 + ph) * 5, -16, 7, 16);
+  // low heavy body, longer than tall (~95 x 46)
+  ctx.beginPath(); ctx.ellipse(0, -32, 46, 22, 0, 0, Math.PI * 2); ctx.fill();
+  // head, lowering during the telegraph
+  ctx.beginPath(); ctx.ellipse(-42, -28 + headDrop * 0.6, 16, 13, 0.2 + headDrop * 0.02, 0, Math.PI * 2); ctx.fill();
+  // bristly mane ridge: spiky triangles along the spine
+  ctx.beginPath();
+  for (let k = 0; k < 7; k++) {
+    const bx = -26 + k * 9;
+    ctx.moveTo(bx, -50); ctx.lineTo(bx + 4, -60 - (k % 2) * 3); ctx.lineTo(bx + 8, -50);
+  }
+  ctx.fill();
+  // snout
+  ctx.beginPath(); ctx.ellipse(-56, -22 + headDrop * 0.7, 6.5, 5, 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = SHADE;
+  ctx.beginPath(); ctx.ellipse(0, -24, 44, 12, 0, 0, Math.PI); ctx.fill();               // belly shade
+  // small tusks
+  ctx.strokeStyle = PALE; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-52, -19 + headDrop * 0.7); ctx.quadraticCurveTo(-57, -24 + headDrop * 0.7, -54, -29 + headDrop * 0.7); ctx.stroke();
+  ctx.fillStyle = PALE; ctx.beginPath(); ctx.arc(-45, -34 + headDrop * 0.6, 1.6, 0, Math.PI * 2); ctx.fill();   // eye
   ctx.restore();
 }
 // Ferret-shaped: long, low, slinky — the body undulates as it runs, tail nearly body-length.
@@ -375,7 +421,8 @@ function drawWallaby(ctx, x, gy, c) {
   const hop = c.state === 'hop' ? clamp(c.hopT, 0, 1) : 0;
   const wy = Math.sin(hop * Math.PI) * HZ.WALLABY_HOP_H;
   const lean = c.state === 'hop' ? -0.35 + hop * 0.55 : 0;      // nose up on launch, down on landing
-  ctx.save(); ctx.translate(x, gy - wy); ctx.rotate(lean);
+  const coil = c.state === 'coil' ? Math.min(1, c.coilT / HZ.WALLABY_COIL_S) : 0;   // visible squat = telegraph
+  ctx.save(); ctx.translate(x, gy - wy + coil * 5); ctx.scale(1, 1 - coil * 0.22); ctx.rotate(lean);
   ctx.strokeStyle = '#3a3028'; ctx.lineWidth = 5; ctx.lineCap = 'round';                     // brush tail
   ctx.beginPath(); ctx.moveTo(12, -14); ctx.quadraticCurveTo(26, -8, 32, -18); ctx.stroke();
   ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(27, -16); ctx.lineTo(32, -18); ctx.stroke(); // bushy tip

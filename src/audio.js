@@ -100,6 +100,20 @@ export const AudioBed = {
     g2.gain.setValueAtTime(0.18, t0); g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
     src.connect(f); f.connect(g2); g2.connect(this.master); src.start(t0); src.stop(t0 + 0.08);
   },
+  // pig telegraph: a short grunt-snort (event bus)
+  grunt() {
+    if (!this.ready || this.muted) return;
+    const ctx = this.ctx, t0 = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(130, t0); o.frequency.exponentialRampToValueAtTime(70, t0 + 0.16);
+    g.gain.setValueAtTime(0.2, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.18);
+    o.connect(g); g.connect(this.master); o.start(t0); o.stop(t0 + 0.2);
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(), g2 = ctx.createGain();
+    f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 1.2;
+    g2.gain.setValueAtTime(0.14, t0); g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+    src.connect(f); f.connect(g2); g2.connect(this.master); src.start(t0); src.stop(t0 + 0.1);
+  },
   // Night Marcher drum: one soft low thump (event bus, quiet)
   drum(level) {
     if (!this.ready || this.muted) return;

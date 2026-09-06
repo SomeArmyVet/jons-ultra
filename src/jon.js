@@ -30,12 +30,15 @@ export const JON = {
   POSE_RATE: 26,
   LAND_SQUASH_S: 0.14,
   BIB: '254',               // placeholder until race config supplies bibNumber
-  POLES: true               // per-race flag from step 6; default true, false for Across the Years
+  POLES: true,              // per-race flag from step 6; default true, false for Across the Years
+  SLIDE_MAX_S: 1.2,         // a slide lasts at most this long, then Jon auto-stands into a crouch-walk
+  SLIDE_CD_S: 0.4           // cooldown before the next slide
 };
 
 export function makeJon() {
   return {
     y: 0, prevY: 0, vy: 0, grounded: true, jumpedSinceGround: false, holding: false, plantBeat: null,
+    duckT: 0, slideCd: 0,
     stumbleT: 0, headScreen: { x: 0, y: 0 }, forcedState: null, footBeat: null,
     lastGroundedAt: 0, landedAt: -1, state: 'run', phase: 0,
     gait: 'flat',            // flat | up | down — sim sets this from grade at step 2
@@ -75,6 +78,10 @@ const POSES = {
               nearSh: 0.95, nearEl: 0.5, farSh: 0.7, farEl: 0.6, windMul: 0.8, poleAng: 0.9, poleSplit: 1, beardFly: 0, poleUp: 0 },
   duck:     { hipY: -36, lean: 1.05, headPitch: -0.35, nearHip: 1.3, nearKnee: 2.15, farHip: 0.95, farKnee: 2.0,
               nearSh: 0.9, nearEl: 1.1, farSh: 0.6, farEl: 1.3, windMul: 0.6, poleAng: 0.25, poleSplit: 0, beardFly: 0, poleUp: 0 },
+  // crouch-walk: what a slide becomes after SLIDE_MAX_S with Down still held — low but upright enough
+  // to keep moving (slower; the sim applies CROUCH_SPEED)
+  crouch:   { hipY: -48, lean: 0.7, headPitch: -0.25, nearHip: 0.9, nearKnee: 1.5, farHip: 0.5, farKnee: 1.3,
+              nearSh: 0.6, nearEl: 1.4, farSh: 0.4, farEl: 1.5, windMul: 0.5, poleAng: 0.3, poleSplit: 0, beardFly: 0, poleUp: 0 },
   // aid-station stop: hands on hips, head tilted back to drink (character sheet §6.6)
   aid:      { hipY: -62, lean: 0.02, headPitch: -0.3, nearHip: 0.1, nearKnee: 0.12, farHip: -0.1, farKnee: 0.12,
               nearSh: 0.35, nearEl: 2.55, farSh: -0.8, farEl: 1.9, windMul: 0.05, poleAng: 0.9, poleSplit: 1, beardFly: 0, poleUp: 0 },
@@ -111,9 +118,26 @@ export function jonStep(j, dt) {
     }
   } else j.lastGroundedAt = now;
 
-  const ducking = j.grounded && Input.duckHeld;
-  j.state = j.forcedState && j.grounded ? j.forcedState : !j.grounded ? (j.vy > 0 ? 'jumpUp' : 'jumpDown') : j.stumbleT > 0 ? 'stumble' : ducking ? 'duck' : 'run';
+  // Slide cap: a slide (duck) lasts at most SLIDE_MAX_S, then becomes a crouch-walk while Down is
+  // held; releasing a slide starts the cooldown before the next one.
+  if (j.slideCd > 0) j.slideCd -= dt;
+  const wantLow = j.grounded && Input.duckHeld;
+  let low = null;
+  if (wantLow) {
+    if (j.state === 'duck') {
+      j.duckT += dt;
+      if (j.duckT >= JON.SLIDE_MAX_S) { low = 'crouch'; j.slideCd = JON.SLIDE_CD_S; }
+      else low = 'duck';
+    } else if (j.state === 'crouch') low = 'crouch';
+    else if (j.slideCd <= 0) { low = 'duck'; j.duckT = 0; }
+    else low = 'crouch';
+  } else {
+    if (j.state === 'duck') j.slideCd = JON.SLIDE_CD_S;
+    j.duckT = 0;
+  }
+  j.state = j.forcedState && j.grounded ? j.forcedState : !j.grounded ? (j.vy > 0 ? 'jumpUp' : 'jumpDown') : j.stumbleT > 0 ? 'stumble' : low ? low : 'run';
   if (j.state === 'run') j.phase += dt * GAME.animSpeed / JON.STRIDE_PX * Math.PI * 2;
+  else if (j.state === 'crouch') j.phase += dt * GAME.animSpeed / JON.STRIDE_PX * Math.PI * 2 * 0.7;
   else if (j.state === 'duck' || j.state === 'stumble') j.phase += dt * 1.5;
 
   blendPose(j, j.state === 'run' ? gaitPose(j.phase, j.gait) : POSES[j.state], dt);

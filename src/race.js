@@ -14,7 +14,7 @@ export const RACE = {
   FINISH_ZOOM: 0.35, ZOOM_LEAD_S: 2,
   BATTERY_LAMP_MUL: 1.4, BANDANA_DRAIN_MUL: 0.6, POLES_CLIMB_MUL: 1.08,
   PACER_X_OFFSET: -125, PACER_CALLOUT_PX: 420,
-  HIT_ENERGY: 10,
+  HIT_ENERGY: 6,               // 6e: hits are ~3x denser than 6c, so each costs less
   FALL_S: 1.4                   // stumble-fall duration after hitsPerFall hits in a segment
 };
 
@@ -32,6 +32,8 @@ function buildStationList(course) {
   }
   list.sort((a, b) => a.absMile - b.absMile);
   if (st.type !== 'loop') list.push({ station: { name: 'Finish', mile: course.distanceMiles, dropBag: false, pacerStart: false }, absMile: course.distanceMiles, lap: 0, isFinish: true, cutoffH: course.timeLimitHours });
+  // absMile is the real (display) mile — cards, cutoffs, HUD; trailMile is where it sits in the world.
+  for (const occ of list) occ.trailMile = occ.absMile / GAME.mileRate;
   return list;
 }
 // Station cutoff: per-station number, per-station per-lap array, or the course's absMile→hours schedule.
@@ -135,8 +137,13 @@ export function resetRace() {
   // Per-race character flags come from the config (character sheet: poles off only for Across the Years).
   JON.BIB = String(GAME.course.bibNumber || '254');
   JON.POLES = GAME.course.poles !== false;
-  // Pace from targetMinutes (SIM.BASE_LAP_MIN comment explains the derivation); 1 when unset.
-  GAME.paceMul = GAME.course.targetMinutes ? SIM.BASE_LAP_MIN / GAME.course.targetMinutes : 1;
+  // Visual loops vs real structure (Architecture §4 `loops`, 6e): the facts, stations, cutoffs and
+  // clock stay on the real structure; the on-screen world runs `loops` passes of the profile.
+  const st = GAME.course.structure;
+  GAME.loops = GAME.course.loops || st.laps || 1;
+  GAME.mileRate = GAME.course.distanceMiles / (GAME.loops * (st.loopMiles || GAME.course.distanceMiles));
+  // Pace from targetMinutes — whole race as played (SIM.PACE_CAL_MIN explains the derivation); 1 when unset.
+  GAME.paceMul = GAME.course.targetMinutes ? SIM.PACE_CAL_MIN / GAME.course.targetMinutes : 1;
   GAME.scroll = 0; GAME.mile = 0; GAME.lap = 1; GAME.raceSec = 0; GAME.speed = 0; GAME.camY = 0;
   GAME.energy = 100; GAME.hydration = 100; GAME.bonk = false; GAME.cramp = false; GAME.crampTimer = 4;
   GAME.collected = new Set(); GAME.floaters = []; GAME.toasts = []; GAME.particles = [];
@@ -148,7 +155,7 @@ export function resetRace() {
   GAME.attempt = (GAME.attempt || 0) + 1;
   GAME.spawn = spawnCourse(GAME.course, GAME.attempt);
   GAME.critters = []; GAME.obIdx = 0; GAME.anIdx = 0; GAME.segHits = 0; GAME.slowT = 0; GAME.slowK = 1;
-  GAME.marchers = { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, dark: 0, wasNight: false };
+  GAME.marchers = { nightIdx: 0, bg: false, onTrailMile: null, crossing: null, crossingDone: false, dark: 0, wasNight: false };
   GAME.jon = makeJon(); GAME.jon.lastGroundedAt = performance.now();
   GAME.fast = false;
   simStep(0);

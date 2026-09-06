@@ -8,8 +8,8 @@ import { AudioBed } from './audio.js';
 
 const ATMO = {
   STARS: 150, STAR_TOP: 330,
-  SHOOT_MIN_S: 120, SHOOT_MAX_S: 240, SHOOT_LEN_S: 0.7,
-  BUTTERFLIES: [2, 4], FIREFLIES: [10, 20], MOTHS: 3,
+  SHOOT_MIN_S: 30, SHOOT_MAX_S: 60, SHOOT_LEN_S: 0.95,   // 6e: every 30-60 s of night, longer streaks
+  BUTTERFLIES: [2, 4], FIREFLIES: [5, 10], MOTHS: 3,     // 6e: firefly population halved
   BIRD_EVERY_S: [20, 40], BAT_EVERY_S: [25, 50],
   RAIN_DROPS: 140, RAIN_SPEED: 900
 };
@@ -63,9 +63,13 @@ export function drawStars(ctx, t, v) {
   ctx.globalAlpha = 1;
   const sh = GAME.shooting;
   if (sh && sh.age < ATMO.SHOOT_LEN_S) {
+    // 6e: longer, brighter streak — a soft wide trail with a white-hot core, meant to be noticed
     const k = sh.age / ATMO.SHOOT_LEN_S, x = sh.x + sh.vx * sh.age, y = sh.y + sh.vy * sh.age;
-    ctx.strokeStyle = `rgba(240,244,255,${(1 - k) * a})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x - sh.vx * 0.18, y - sh.vy * 0.18); ctx.lineTo(x, y); ctx.stroke();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(200,216,255,${(1 - k) * a * 0.5})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x - sh.vx * 0.26, y - sh.vy * 0.26); ctx.lineTo(x, y); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${(1 - k) * a})`; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(x - sh.vx * 0.2, y - sh.vy * 0.2); ctx.lineTo(x, y); ctx.stroke();
   }
 }
 export const atmoRng = rng(0xa7a0);
@@ -159,7 +163,7 @@ export function drawLife(ctx, t, layer, v) {
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.ellipse(e.x - wing * 0.6, e.y, wing, 4, -0.4, 0, Math.PI * 2); ctx.ellipse(e.x + wing * 0.6, e.y, wing, 4, 0.4, 0, Math.PI * 2); ctx.fill();
     } else if ((layer === 'near' && e.type === 'firefly' && e.layer === 1) || (layer === 'fore' && e.type === 'firefly' && e.layer > 1)) {
-      const blink = Math.max(0, Math.sin(t * 2.2 + e.ph * 3)) ** 3 * GAME.night;
+      const blink = Math.max(0, Math.sin(t * 1.1 + e.ph * 3)) ** 3 * GAME.night;   // 6e: slower blink
       if (blink < 0.05) continue;
       const r = e.layer > 1 ? 4 : 3;
       ctx.fillStyle = `rgba(200,240,120,${0.25 * blink})`; ctx.beginPath(); ctx.arc(e.x, e.y, r * 3, 0, Math.PI * 2); ctx.fill();

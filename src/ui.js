@@ -45,8 +45,12 @@ export function drawIntroCard(ctx) {
   ctx.font = '700 30px ' + UI_FONT; ctx.fillText(c.name, r.x + 36, r.y + 44);
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.75)';
   ctx.fillText(`${c.location || 'Test course'}   ·   ${c.structure.type === 'loop' ? `${c.structure.laps} × ${c.structure.loopMiles} mi` : `${c.distanceMiles} mi`}   ·   start ${c.startTime}   ·   ${c.timeLimitHours} h limit`, r.x + 36, r.y + 78);
+  if (c.loops && c.loops !== c.structure.laps) {
+    ctx.fillStyle = 'rgba(234,243,228,0.65)'; ctx.font = '14px ' + UI_FONT;
+    ctx.fillText(`Real race: ${c.structure.laps} laps of a ${c.structure.loopMiles}-mile loop. Game: ${c.loops} loops.`, r.x + 36, r.y + 100);
+  }
   ctx.fillStyle = '#eaf3e4'; ctx.font = '16px ' + UI_FONT;
-  (c.introFacts || []).forEach((f, i) => ctx.fillText('· ' + f, r.x + 36, r.y + 122 + i * 30));
+  (c.introFacts || []).forEach((f, i) => ctx.fillText('· ' + f, r.x + 36, r.y + 126 + i * 28));
   ctx.fillStyle = rules.pacersAllowed ? 'rgba(234,243,228,0.85)' : '#f2a07a'; ctx.font = '600 15px ' + UI_FONT;
   ctx.fillText(rules.pacersAllowed ? `Pacers allowed from mile ${rules.pacerFromMile}${rules.crewAllowed ? ' · crew allowed' : ''}` : 'No crew, no pacer', r.x + 36, r.y + 228);
   ctx.fillStyle = 'rgba(234,243,228,0.6)'; ctx.font = '14px ' + UI_FONT;
@@ -65,6 +69,7 @@ export function drawAidCard(ctx) {
     ctx.fillText(`Cutoff ${fmtClock(occ.cutoffH * 3600)}   ·   ${fmtClock(Math.abs(margin))} ${margin >= 0 ? 'to spare' : 'late'}`, r.x + 30, r.y + 96);
   }
   if (a.item) { ctx.fillStyle = '#D8E24A'; ctx.font = '600 14px ' + UI_FONT; ctx.fillText('Drop bag: ' + ITEM_LABEL[a.item], r.x + 30, r.y + 124); }
+  if (occ.station.crew === false) { ctx.fillStyle = '#f2a07a'; ctx.font = '600 14px ' + UI_FONT; ctx.fillText('No crew access.', r.x + 30, r.y + (a.item ? 140 : 124)); }
   if (!a.done) {
     ctx.fillStyle = 'rgba(234,243,228,0.18)'; ctx.fillRect(r.x + 30, r.y + 152, r.w - 60, 8);
     ctx.fillStyle = '#7FD1FF'; ctx.fillRect(r.x + 30, r.y + 152, (r.w - 60) * clamp(a.t / a.dur, 0, 1), 8);
@@ -128,12 +133,12 @@ export function drawHUD(ctx) {
   const D = DIFFICULTY[GAME.diff], c = GAME.course;
   ctx.fillStyle = 'rgba(16, 32, 26, 0.6)'; ctx.fillRect(0, 0, ENGINE.W, 74);
   ctx.fillStyle = '#eaf3e4'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Jon's Ultra  v0.6", 18, 20);
+  ctx.font = '600 17px ' + UI_FONT; ctx.fillText("Jon's Ultra  v0.7", 18, 20);
 
   // Row 1: position, clock, mode
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.92)';
-  const gradePct = Math.round(GAME.grade * 100);
-  ctx.fillText(`Lap ${GAME.lap} of ${c.structure.laps}   Mile ${GAME.mile.toFixed(2)}   ${Math.round(GAME.elev).toLocaleString()} ft   ${gradePct > 0 ? '+' : ''}${gradePct}%   ${SURFACES[GAME.surface].label}`, 180, 20);
+  const gradePct = Math.round(GAME.grade * 100), disp = GAME.mile * GAME.mileRate;
+  ctx.fillText(`Loop ${GAME.lap} of ${GAME.loops}   Mile ${disp.toFixed(1)}   ${Math.round(GAME.elev).toLocaleString()} ft   ${gradePct > 0 ? '+' : ''}${gradePct}%   ${SURFACES[GAME.surface].label}`, 180, 20);
   ctx.font = '600 15px ' + UI_FONT;
   ctx.fillText(`Race ${fmtClock(GAME.raceSec)}`, 620, 20);
   ctx.font = '15px ' + UI_FONT; ctx.fillStyle = 'rgba(234,243,228,0.8)';
@@ -150,7 +155,7 @@ export function drawHUD(ctx) {
   const nx = nextStation();
   if (nx) {
     ctx.fillStyle = 'rgba(234,243,228,0.85)';
-    ctx.fillText(`${nx.isFinish ? 'Finish' : 'Next aid'}: ${nx.station.name.split(' (')[0]} in ${Math.max(0, nx.absMile - GAME.mile).toFixed(1)} mi`, 500, 56);
+    ctx.fillText(`${nx.isFinish ? 'Finish' : 'Next aid'}: ${nx.station.name.split(' (')[0]} in ${Math.max(0, nx.absMile - GAME.mile * GAME.mileRate).toFixed(1)} mi`, 500, 56);
     if (nx.cutoffH != null) {
       const margin = nx.cutoffH * 3600 - GAME.raceSec;
       ctx.fillStyle = margin < 300 ? '#f28a7a' : margin < 900 ? '#f2d27a' : 'rgba(234,243,228,0.85)';
@@ -185,7 +190,7 @@ function drawElevationStrip(ctx, x, y, w, h) {
   const m = courseLoopMile(c, GAME.mile), px = x + w * m / L, py = y + h - (GAME.elev - lo) / (hi - lo) * (h - 4) - 2;
   ctx.fillStyle = '#F5D021'; ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(234,243,228,0.7)'; ctx.font = '11px ' + UI_FONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('0', x - 8, y + h - 2); ctx.fillText(L + ' mi', x + w + 4, y + h - 2);
+  ctx.fillText('0', x - 8, y + h - 2); ctx.fillText((GAME.course.distanceMiles / GAME.loops).toFixed(0) + ' mi', x + w + 4, y + h - 2);
 }
 
 export function drawPause(ctx) {

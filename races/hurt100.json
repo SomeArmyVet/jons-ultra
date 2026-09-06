@@ -14,8 +14,9 @@
   "sun": { "rise": "07:11", "set": "18:03" },
   "bibNumber": "254",
   "poles": true,
+  "loops": 3,
   "targetMinutes": 10,
-  "drainMul": { "energy": 1.8, "hydration": 2.5 },
+  "drainMul": { "energy": 1.6, "hydration": 2.0 },
   "lore": { "nightMarchers": true },
   "aidStations": [
     { "name": "Makiki (Nature Center)", "mile": 0, "cutoffHours": [null, null, null, 29, 36], "dropBag": true, "pacerStart": true, "crew": true },
@@ -56,12 +57,13 @@
       { "type": "mudPit", "weight": 3, "surfaces": ["mud"] },
       { "type": "streamCrossing", "atMiles": [6.8, 7.6, 12.1, 12.9] }
     ],
+    "hitQuotaPerLoop": 16,
     "animals": [
-      { "type": "pig", "weight": 3, "time": ["dawn", "dusk"] },
+      { "type": "pig", "weight": 0, "time": ["day", "dawn", "dusk"] },
+      { "type": "wallaby", "weight": 0, "time": ["dawn", "dusk", "night"] },
+      { "type": "centipede", "weight": 0, "time": ["night"] },
       { "type": "mongoose", "weight": 4 },
       { "type": "chicken", "weight": 2 },
-      { "type": "wallaby", "weight": 2, "time": ["dawn", "dusk", "night"] },
-      { "type": "centipede", "weight": 2, "time": ["night"] },
       { "type": "rat", "weight": 2, "time": ["night"] }
     ],
     "weather": [
@@ -69,7 +71,7 @@
       { "type": "mist", "aboveFeet": 1400 }
     ]
   },
-  "pickups": ["gel", "saltTab", "watermelon", "bacon", "spamMusubi", "flatCoke"],
+  "pickups": ["gel", "flask", "saltTab", "watermelon", "bacon", "spamMusubi", "flatCoke"],
   "landmarks": [
     { "mile": 0.9, "label": "Hogsback" },
     { "mile": 2.2, "label": "The Pipes" },

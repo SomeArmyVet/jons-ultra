@@ -142,9 +142,12 @@ export function drawSpectator(ctx, x, y, s, seed, t, dim) {
 // --- Katie (cast sheet §2): straight dark hair past the shoulders, full straight fringe as a band above
 // the frames, thin black rectangular glasses with a lighter lens fill, charcoal tee, jeans, black boots,
 // cowbell up, other arm waving on her own timing. Front row near side, closest to the tape.
-export function drawKatie(ctx, x, y, s, t, cheer) {
+// mode: 'cheer' (finish, default) | 'aid' (crewing, cowbell down) | 'offer' (handing Jon a flask
+// during the refill). Same design everywhere — the fringe, glasses, dark tee, jeans, cowbell.
+export function drawKatie(ctx, x, y, s, t, cheer, mode) {
   const K = CAST.KATIE;
-  const bounce = -Math.abs(Math.sin(t * 5.5)) * CAST.BOUNCE_PX * cheer;
+  const aid = mode === 'aid' || mode === 'offer';
+  const bounce = aid ? 0 : -Math.abs(Math.sin(t * 5.5)) * CAST.BOUNCE_PX * cheer;
   ctx.save(); ctx.translate(x, y + bounce); ctx.scale(s, s);
   // hair back mass first: straight, past the shoulders
   ctx.fillStyle = K.hair; ctx.beginPath(); ctx.roundRect(-11.5, -90, 23, 44, [9, 9, 3, 3]); ctx.fill();
@@ -164,12 +167,25 @@ export function drawKatie(ctx, x, y, s, t, cheer) {
   ctx.strokeStyle = K.frame; ctx.lineWidth = 1.3; ctx.lineJoin = 'round';
   ctx.strokeRect(-6.8, -77.6, 5.6, 4.6); ctx.strokeRect(1.2, -77.6, 5.6, 4.6);
   ctx.beginPath(); ctx.moveTo(-1.2, -76.2); ctx.lineTo(1.2, -76.2); ctx.stroke();           // bridge
-  // arms: her own wave timing (nobody in the crowd shares it), cowbell in the other hand
   ctx.strokeStyle = K.skin; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
-  const waveA = 2.35 + Math.sin(t * 3.4) * 0.25;
-  ctx.beginPath(); ctx.moveTo(9, -62); ctx.lineTo(9 + Math.sin(waveA) * 22, -62 + Math.cos(waveA) * 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-9, -62); ctx.lineTo(-14, -84); ctx.stroke();
-  drawCowbell(ctx, -14, -84, t, 0, '#8f8f93', '#4a4a4e');
+  if (aid) {
+    // crewing: cowbell held down at her side; in 'offer' the other arm extends a flask toward Jon
+    ctx.beginPath(); ctx.moveTo(9, -62); ctx.lineTo(13, -42); ctx.stroke();
+    drawCowbell(ctx, 13, -42, t, 0, '#8f8f93', '#4a4a4e');
+    if (mode === 'offer') {
+      ctx.beginPath(); ctx.moveTo(-9, -62); ctx.lineTo(-26, -56); ctx.stroke();
+      ctx.fillStyle = '#A9C7D6'; ctx.beginPath(); ctx.roundRect(-32, -64, 8, 14, 3); ctx.fill();   // the flask
+      ctx.fillStyle = '#2E7BD6'; ctx.fillRect(-30.5, -66.5, 5, 3.5);
+    } else {
+      ctx.beginPath(); ctx.moveTo(-9, -62); ctx.lineTo(-13, -44); ctx.stroke();                    // at ease
+    }
+  } else {
+    // finish: her own wave timing (nobody in the crowd shares it), cowbell up in the other hand
+    const waveA = 2.35 + Math.sin(t * 3.4) * 0.25;
+    ctx.beginPath(); ctx.moveTo(9, -62); ctx.lineTo(9 + Math.sin(waveA) * 22, -62 + Math.cos(waveA) * 22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9, -62); ctx.lineTo(-14, -84); ctx.stroke();
+    drawCowbell(ctx, -14, -84, t, 0, '#8f8f93', '#4a4a4e');
+  }
   ctx.restore();
 }
 

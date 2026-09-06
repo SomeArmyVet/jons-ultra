@@ -27,10 +27,10 @@ The split was mechanical as planned: each phase-1 section became one file, verif
 4. `src/sim.js` — meters, race clock, course sampling (elevation/grade/surface), DIFFICULTY and SURFACES tables, palette blending, placeholder trail pickups.
 5. `src/race.js` — station list, cutoffs, aid stops, pacer, drop-bag bonuses, hit pipeline, DNF/finish, race reset.
 6. `src/spawner.js` — reads the race config's hazard tables and surfaces; emits obstacles and animals with seeded RNG (seed = race id + attempt). Fixed-mile obstacles (stream crossings) repeat at their real miles every lap; weighted ones roll per slot honouring surface filters, with minimum spacing and aid-station clear zones.
-7. `src/hazards.js` — obstacle resolution (jump the root web, duck the limb, slide the slab, hop or wade the streams, jump the mud pit) and animal behaviours (boar charge, mongoose dart, centipede bite, chicken flee, rat streak) with drawing functions; owns the segment hit counter (hitsPerFall → stumble-fall).
+7. `src/hazards.js` — obstacle resolution (jump the root web, duck the limb, slide the slab, hop or wade the streams, jump the mud pit) and animal behaviours (pig telegraph-and-bolt, wallaby coil-and-hop, mongoose dart, centipede bite, chicken scatter, rat streak, night eye-shine) with drawing functions; the Huakaʻi Pō lore hazard; owns the segment hit counter (hitsPerFall → stumble-fall).
 8. `src/atmosphere.js` — sun/moon clocks, day/night keyframes, stars + shooting stars, rain/mist, ambient life, foot dust. Decoration only.
 9. `src/biomes/rainforest.js` + `src/biomes/index.js` — one file per kit (sky, ridges, vegetation, ground, foreground, palettes, life sets); `registerBiomes()` fills BIOMES at boot (registration at boot avoids import-cycle TDZ).
-10. `src/cast.js` — finish-line cast: drawKatie, drawEmma, drawTortoise, drawSpectator (cast sheet §7).
+10. `src/cast.js` — the cast: drawKatie (finish cheer + aid-station crewing modes), drawEmma, drawTortoise, drawSpectator (cast sheet §7).
 11. `src/ui.js` — intro/aid/DNF/finish cards, HUD, buttons, toasts; title + race select arrive at step 7.
 12. `src/audio.js` — synth voices and ambient beds keyed by biome.
 13. `src/store.js` — save/load per race + difficulty (localStorage behind the phase-1 interface).
@@ -69,14 +69,16 @@ Every race is one object. Adding a race = adding one object and, if needed, one 
   ],
   rules: { pacersAllowed: true, pacerFromMile: 60, crewAllowed: true },
   poles: true,                         // Jon carries poles in this race (false only for Across the Years)
-  targetMinutes: 10,                   // design minutes for one lap as played (Realistic); scales world speed AND race clock together, so raceSec-per-mile (cutoffs, day/night) is invariant
-  drainMul: { energy: 1.8, hydration: 2.5 },   // per-race climate: HURT humidity (defaults 1)
+  targetMinutes: 10,                   // design minutes for the WHOLE RACE as played (Realistic, 6e); scales world speed AND race clock together, so raceSec-per-display-mile (cutoffs, day/night) is invariant
+  loops: 3,                            // visual loops (6e): the world runs `loops` passes of the profile while the mile counter, stations, cutoffs and clock stay on the real structure (5 × 20). One on-screen loop = 33.3 real miles.
+  drainMul: { energy: 1.6, hydration: 2.0 },   // per-race climate: HURT humidity (defaults 1; tuned by the 6e acceptance pass)
   lore: { nightMarchers: true },       // Hawaiian races only: Huakaʻi Pō lore hazard (Race Bible §1)
   tortoise: { where: "aidTable" },     // finish-line easter egg placement: "aidTable" | "trail" | "tote" | "rock" | "lap" (cast sheet §5/§7); pick one per race, vary it
 
   hazards: {
     obstacles: [ { type: "rootWeb", weight: 5, surfaces: ["roots"] }, { type: "streamCrossing", weight: 2, atMiles: [6.8, 7.6, 12.1, 12.9] }, ... ],
-    animals:   [ { type: "boar", weight: 3, time: ["dawn", "dusk"] }, { type: "mongoose", weight: 4 }, { type: "centipede", weight: 2, time: ["night"] } ],
+    hitQuotaPerLoop: 16,               // biters (pig/wallaby/centipede) placed per visual loop, phase-aware, so hits-per-loop sits in the 3–8 design band (6e); 0/absent = all animals roll from the table
+    animals:   [ { type: "pig", weight: 0, time: ["day", "dawn", "dusk"] }, { type: "mongoose", weight: 4 }, { type: "centipede", weight: 0, time: ["night"] } ],   // weight 0 = quota-driven biter, listed for the fauna record
     weather:   [ { type: "rainSquall", chancePerMile: 0.05 }, { type: "mist", aboveFeet: 1400 } ]
   },
   pickups: ["gel", "saltTab", "watermelon", "bacon", "spamMusubi", "flatCoke"],
@@ -94,7 +96,7 @@ Validation: on load, `races` runs a schema check and throws with the race id and
 
 ## 6. Time scale
 
-Realistic: 100 miles ≈ 30 min → 18 s per mile at flat pace. Arcade: ≈ 6 min → 3.6 s per mile. Race clock advances proportionally so that the day/night cycle and cutoffs stay true to the real event regardless of mode.
+Pace is data (6e): each race's `targetMinutes` is the whole-race Realistic duration as played (HURT: 10). paceMul = SIM.PACE_CAL_MIN / targetMinutes scales world speed and the race clock together, so raceSec-per-display-mile — the day/night cycle and every cutoff — stays true to the real event regardless of pace or mode. Arcade ≈ targetMinutes / 5.
 
 ## 7. Persistence keys
 

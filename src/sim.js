@@ -19,19 +19,21 @@ export const SIM = {
   GAIT_ON: 0.05, GAIT_OFF: 0.03,
   JUMP_GRADE_K: 1.6,
   STUMBLE_S: 0.55, STUMBLE_SPEED: 0.4,
-  PICKUP_SPACING: 0.6, PICKUP_CHANCE: 0.6, PICKUP_REACH_PX: 40,  // reach = max jump height at which a trail pickup is still grabbed
-  // Pace is data: a race's `targetMinutes` is the design minutes for one lap as played (Realistic).
-  // BASE_LAP_MIN is the measured as-played HURT lap at v0.6 base tuning (Michael's playtest, 2026-09-05).
-  // paceMul scales BOTH world speed and the race clock, so raceSec-per-mile — cutoffs, day/night —
-  // is untouched; the game just runs proportionally faster.
-  BASE_LAP_MIN: 14
+  PICKUP_SPACING: 0.32, PICKUP_CHANCE: 0.6, PICKUP_REACH_PX: 40,  // 0.6 → 0.32 (6d pickups +65%, then 6e acceptance tuning); reach = max jump height that still grabs
+  // Pace is data (6e semantics): a race's `targetMinutes` is the design minutes for the WHOLE RACE as
+  // played (Realistic). PACE_CAL_MIN is the reference-runner whole-race minutes at paceMul 1, measured
+  // in the 6e acceptance harness; paceMul = PACE_CAL_MIN / targetMinutes. paceMul scales BOTH world
+  // speed and the race clock, so raceSec-per-mile — cutoffs, day/night — is untouched.
+  PACE_CAL_MIN: 23,
+  CROUCH_SPEED: 0.55,         // crouch-walk (Down held past the slide cap) — slower on purpose
+  ANIM_CADENCE_CAP: 1.4       // leg cadence stops scaling with paceMul beyond this (looks silly past it)
 };
 
 // Meters drain by distance. Base rates are Realistic; DIFFICULTY scales them.
 const METERS = {
   ENERGY_PER_MILE: 7, HYDRATION_PER_MILE: 5,
   ENERGY_GRADE_K: 4,          // ×(1 + K·grade) on climbs
-  HEAT_K: 1.0                 // hydration ×(1 + K·midday) — midday = 1 at 12:00, 0 at dawn/dusk (raised 2026-09-05: heat bites harder)
+  HEAT_K: 0.85                // hydration ×(1 + K·midday) — stronger than v0.5's 0.6, trimmed from 1.0 by the 6e acceptance pass (the Sunday-noon finish decides the hydration criterion)
 };
 
 // Design Bible §6: difficulty is data. The sim reads the active table; no if (arcade) anywhere else.
@@ -51,14 +53,15 @@ export const SURFACES = {
 };
 
 // Trail pickup effects; each race's `pickups` config lists which of these appear on its trail.
+// Values ×1.65 (6d: pickups +65% — applied to both count and restore, tuned by the 6e harness).
 const PICKUPS = {
-  gel:        { label: 'Gel',         energy: 8,  hydration: 0 },
-  flask:      { label: 'Flask',       energy: 0,  hydration: 8 },
-  watermelon: { label: 'Watermelon',  energy: 4,  hydration: 5 },
-  saltTab:    { label: 'Salt tab',    energy: 0,  hydration: 6 },
-  bacon:      { label: 'Bacon',       energy: 10, hydration: 0 },
-  spamMusubi: { label: 'Spam musubi', energy: 12, hydration: 0 },
-  flatCoke:   { label: 'Flat Coke',   energy: 6,  hydration: 4 }
+  gel:        { label: 'Gel',         energy: 15, hydration: 0 },
+  flask:      { label: 'Flask',       energy: 0,  hydration: 24 },
+  watermelon: { label: 'Watermelon',  energy: 7,  hydration: 14 },
+  saltTab:    { label: 'Salt tab',    energy: 0,  hydration: 20 },
+  bacon:      { label: 'Bacon',       energy: 18, hydration: 0 },
+  spamMusubi: { label: 'Spam musubi', energy: 22, hydration: 0 },
+  flatCoke:   { label: 'Flat Coke',   energy: 10, hydration: 14 }
 };
 
 export function courseLoopMile(course, mile) {
@@ -112,30 +115,36 @@ export function triggerStumble(j) {
   j.stumbleT = SIM.STUMBLE_S; GAME.shake = Math.max(GAME.shake, 5);
 }
 
+// GAME.mile is TRAIL miles (world geometry: one visual loop = one pass of the 20-mile profile).
+// Display miles — the real race's mile counter — are trail × mileRate; stations, cutoffs, drains and
+// the HUD all live in display miles (Architecture §4 `loops`, 6e).
+export function displayMile() { return GAME.mile * GAME.mileRate; }
+
 export function simStep(dt) {
   const c = GAME.course, D = DIFFICULTY[GAME.diff], j = GAME.jon;
   const fast = GAME.fast ? 4 : 1, sdt = dt * fast;
   const prevMile = GAME.mile, prevBonk = GAME.bonk;
   GAME.mile = GAME.scroll / SIM.PX_PER_MILE;
-  // Station arrivals (one per step is plenty).
+  // Station arrivals (one per step is plenty). Stations fire at their real display miles via trailMile.
   const nxt = nextStation();
-  if (nxt && GAME.mile >= nxt.absMile && !GAME.aid) { GAME.nextIdx++; arriveAt(nxt); if (GAME.screen !== 'race') return; }
-  GAME.lap = Math.min(c.structure.laps, Math.floor(GAME.mile / c.structure.loopMiles) + 1);
+  if (nxt && GAME.mile >= nxt.trailMile && !GAME.aid) { GAME.nextIdx++; arriveAt(nxt); if (GAME.screen !== 'race') return; }
+  GAME.lap = Math.min(GAME.loops, Math.floor(GAME.mile / c.structure.loopMiles) + 1);
   GAME.elev = courseElev(c, GAME.mile);
   GAME.grade = courseGrade(c, GAME.mile);
   GAME.surface = courseSurface(c, GAME.mile);
   const surf = SURFACES[GAME.surface], g = GAME.grade;
 
   // Race clock: real seconds per game second, so day/night and cutoffs match the real event in either mode.
-  // paceMul scales clock and speed together, keeping raceSec-per-mile — and every cutoff — invariant.
-  GAME.raceSec += sdt * D.timeScale * GAME.paceMul;
+  // paceMul and mileRate scale clock and display-mile speed together, keeping raceSec-per-display-mile
+  // — and every cutoff — invariant.
+  GAME.raceSec += sdt * D.timeScale * GAME.paceMul * GAME.mileRate;
   GAME.hour = (courseStartHour(c) + GAME.raceSec / 3600) % 24;
   GAME.night = nightAmount(GAME.hour);
 
   // Meters: empty energy = bonk, empty hydration = cramp. Per-race climate multipliers come from the
   // config's drainMul (HURT: Hawaiian humidity — hydration ×2.5, energy ×1.8, Michael 2026-09-05).
   const dm = c.drainMul || {};
-  const dMiles = Math.max(0, GAME.mile - prevMile);
+  const dMiles = Math.max(0, GAME.mile - prevMile) * GAME.mileRate;   // drains are per real (display) mile
   GAME.energy = clamp(GAME.energy - dMiles * METERS.ENERGY_PER_MILE * (dm.energy || 1) * D.energyDrain * (1 + METERS.ENERGY_GRADE_K * Math.max(0, g)) * surf.drain, 0, 100);
   GAME.hydration = clamp(GAME.hydration - dMiles * METERS.HYDRATION_PER_MILE * (dm.hydration || 1) * D.hydrationDrain * (1 + METERS.HEAT_K * middayAmount(GAME.hour)) * (bonusActive('iceBandana') ? RACE.BANDANA_DRAIN_MUL : 1), 0, 100);
   GAME.bonk = GAME.energy <= 0;
@@ -180,10 +189,11 @@ export function simStep(dt) {
   if (g > 0 && bonusActive('poles')) target *= RACE.POLES_CLIMB_MUL;
   if (GAME.bonk) target *= D.bonkSpeed;
   if (j.stumbleT > 0) target *= SIM.STUMBLE_SPEED;
+  if (j.state === 'crouch') target *= SIM.CROUCH_SPEED;       // crouch-walk: low but slow
   if (GAME.slowT > 0) target *= GAME.slowK;                   // wading a stream or slogging a mud pit
   if (GAME.aid && !GAME.aid.done) target = 0;                 // stopped at the aid table
   GAME.speed = dt > 0 ? lerpTo(GAME.speed, target, dt, GAME.aid && !GAME.aid.done ? 8 : SIM.SPEED_RATE) : target;
-  GAME.animSpeed = GAME.speed / D.speedMul;
+  GAME.animSpeed = GAME.speed / D.speedMul / Math.max(1, GAME.paceMul / SIM.ANIM_CADENCE_CAP);
   GAME.scroll += GAME.speed * sdt;
 
   GAME.camY = lerpTo(GAME.camY, clamp(g * SIM.FT_TO_PX * SIM.CAM_K, -SIM.CAM_MAX, SIM.CAM_MAX), dt, SIM.CAM_RATE);

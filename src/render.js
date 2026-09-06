@@ -43,7 +43,7 @@ export function render(ctx, tReal) {
   drawLife(ctx, t, 'mid', view);
   kit.nearVegetation(ctx, pal, t, view);
   kit.ground(ctx, pal, t, view);
-  drawAidStations(ctx, view);
+  drawAidStations(ctx, view, t);
   drawFinishLine(ctx, view, t, 'back');
   drawGroundShadow(ctx, JON.X, groundY, GAME.jon.y, -GAME.grade * SIM.FT_TO_PX, JON.TARGET_PX / JON.FIGURE_UNITS);
   drawPickups(ctx, view);
@@ -92,7 +92,7 @@ const LAMP = { LEN: 560, HALF: 0.34, PITCH: 0.14, HALO: 95 };
 // headlamp cone. This is what lets Jon see faces at a night finish.
 const FLOOD = { R: 230, CY: 55, OFF_X: 60, WARM: 0.10 };
 function floodCenters(view) {
-  const fx = absMileToScreenX(finishAbsMile());
+  const fx = absMileToScreenX(finishTrailMile());
   if (fx < -400 || fx > view.W + 400) return null;
   const gy = view.groundAt(fx);
   return { fx, gy, centers: [[fx - FLOOD.OFF_X, gy - FLOOD.CY], [fx + FLOOD.OFF_X, gy - FLOOD.CY]] };
@@ -201,12 +201,13 @@ function drawPickups(ctx, view) {
 }
 
 // --- race furniture in the world: aid stations, finish banner, crowd, pacer ---
-function absMileToScreenX(absMile) { return JON.X + (absMile - GAME.mile) * SIM.PX_PER_MILE; }
+// Positions are TRAIL miles (occ.trailMile); occ.absMile is the real display mile for cards and cutoffs.
+function absMileToScreenX(trailMile) { return JON.X + (trailMile - GAME.mile) * SIM.PX_PER_MILE; }
 
-function drawAidStations(ctx, view) {
+function drawAidStations(ctx, view, t) {
   for (let i = Math.max(0, GAME.nextIdx - 1); i < Math.min(GAME.stations.length, GAME.nextIdx + 2); i++) {
     const occ = GAME.stations[i]; if (occ.isFinish) continue;
-    const x = absMileToScreenX(occ.absMile);
+    const x = absMileToScreenX(occ.trailMile);
     if (x < -160 || x > view.W + 160) continue;
     const y = view.groundAt(x);
     // tent behind the trail
@@ -221,13 +222,20 @@ function drawAidStations(ctx, view) {
     ctx.fillStyle = '#1A1A1A'; ctx.font = '600 13px ' + UI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(occ.station.name.split(' (')[0], x, y - 115);
     ctx.fillStyle = '#6a5a3a'; ctx.fillRect(x - 2, y - 102, 4, 98);
+    // Katie crews every crew-allowed station (cast sheet: she does in real life) — same design as the
+    // finish, handing Jon a flask during the refill. Absent where crew is not allowed (Nu'uanu).
+    if (occ.station.crew !== false) {
+      const offering = !!(GAME.aid && GAME.aid.occ === occ && !GAME.aid.done);
+      drawKatie(ctx, x + 92, y + 2, castScale('front'), t, 0, offering ? 'offer' : 'aid');
+      GAME.lastKatieAt = occ.station.name;
+    }
   }
 }
 
 // Finish line: banner over the trail, tape until it's broken, crowd on both sides, Katie and Emma front row near side.
-export function finishAbsMile() { return GAME.stations[GAME.stations.length - 1].absMile; }
+export function finishTrailMile() { return GAME.stations[GAME.stations.length - 1].trailMile; }
 function drawFinishLine(ctx, view, t, layer) {
-  const fx = absMileToScreenX(finishAbsMile());
+  const fx = absMileToScreenX(finishTrailMile());
   if (fx < -300 || fx > view.W + 400) return;
   const gy = view.groundAt(fx);
   if (layer === 'back') {
@@ -292,13 +300,13 @@ function drawFinishTortoise(ctx, view, fx, gy, t) {
 }
 // Katie is closest to the finish tape (cast sheet §2); Emma stands beside her.
 function katieEmmaScreen(view) {
-  const fx = absMileToScreenX(finishAbsMile());
+  const fx = absMileToScreenX(finishTrailMile());
   return { katie: { x: fx - 44, y: view.groundAt(fx - 44) + 14 }, emma: { x: fx - 78, y: view.groundAt(fx - 78) + 14 } };
 }
 // Camera ease toward Katie and Emma over the last ZOOM_LEAD_S seconds, held through the finish.
 function finishZoom() {
   if (GAME.screen === 'finish') return 1;
-  const distPx = (finishAbsMile() - GAME.mile) * SIM.PX_PER_MILE;
+  const distPx = (finishTrailMile() - GAME.mile) * SIM.PX_PER_MILE;
   if (distPx > 1600) return 0;
   const tTo = distPx / Math.max(GAME.speed, 40);
   return clamp(1 - tTo / RACE.ZOOM_LEAD_S, 0, 1);

@@ -1,10 +1,17 @@
-# Jon's Ultra — Finish-Line Cast
+# Jon's Ultra — Cast
 
-Status: v0.2 (Sep 5 2026 — Emma's sign dropped for the raised phone, floodlights added, two-row crowd rule added; Michael's finish-line pass). Requested by Michael for the finish sequence (Design Bible §10 screen 6 and Architecture §9 step 4). Read when building the finish screen. Reference photos of Katie and Emma live in `02-jon-reference/`; they are for likeness checks only, never traced or embedded.
+Status: v0.3 (Sep 5 2026 — scope renamed from Finish-Line Cast to Cast: Katie now also crews aid stations, 6e). Previously v0.2 (Emma's sign dropped for the raised phone, floodlights, two-row crowd). Requested by Michael for the finish sequence (Design Bible §10 screen 6 and Architecture §9 step 4). Read when building the finish screen. Reference photos of Katie and Emma live in `02-jon-reference/`; they are for likeness checks only, never traced or embedded.
 
 ## 1. The moment
 
 Jon crosses the finish line into a cheering crowd. Two people in that crowd must be findable at a glance from the running lane: his wife Katie and his daughter Emma. Everyone else is generic spectators. Somewhere in the scene, easy to miss, is his pet desert tortoise.
+
+## 1b. Katie crews the aid stations (added 6e — she does in real life)
+
+- At every crew-allowed station (the config's `crew` flag) Katie stands at the aid table: same design as the finish — fringe, glasses, dark tee, cowbell (held at her side).
+- During Jon's refill she extends a flask toward him ("offer" pose). No bounce, no wave — she's working.
+- At `crew: false` stations (Nu'uanu) she is absent and the aid card reads "No crew access."
+- Emma is finish-line only.
 
 ## 2. Katie (wife)
 
